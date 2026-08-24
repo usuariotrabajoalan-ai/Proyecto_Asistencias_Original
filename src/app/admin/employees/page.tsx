@@ -24,7 +24,7 @@ export default function EmployeesPage() {
 
   const fetchEmployees = async () => {
     try {
-      const res = await fetch('/api/employees');
+      const res = await fetch('/api/employees', { cache: 'no-store' });
       if (res.ok) setEmployees(await res.json());
     } catch (e) {
       console.error(e);

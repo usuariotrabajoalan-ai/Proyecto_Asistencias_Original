@@ -122,46 +122,59 @@ export default function Home() {
       if (!loc) {
         try {
           loc = await requestLocation();
-          setLocation(loc);
-        } catch (e) {
-          setError(e as string);
-          setLoading(false);
-          return;
-        }
-      }
-
-      const res = await fetch('/api/attendance', {
+    if (!employee || !location) {
+      setError('Asegúrate de buscar tu CI y tener ubicación');
+      return;
+    }
+    setLoading(true);
+    setError('');
+    try {
+      let res = await fetch('/api/attendance', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ci,
           type,
-          latitude: loc.lat,
-          longitude: loc.lng,
+          latitude: location.lat,
+          longitude: location.lng,
           photoBase64,
           observation: observation.trim() || null
         })
       });
-
+      if (!res.ok && res.status >= 500) {
+        await new Promise(r => setTimeout(r, 1500));
+        res = await fetch('/api/attendance', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ci,
+            type,
+            latitude: location.lat,
+            longitude: location.lng,
+            photoBase64,
+            observation: observation.trim() || null
+          })
+        });
+      }
+      
       if (res.ok) {
+        setSuccessType(type);
         setSuccessName(`${employee.firstName} ${employee.lastName}`);
-        setSuccessType(type.toLowerCase());
         setSuccess('ok');
-        // Limpiar después de 5 segundos
         setTimeout(() => {
           setCi('');
           setEmployee(null);
           setPhotoBase64('');
-          setLocation(null);
           setObservation('');
           setSuccess('');
-        }, 5000);
+          setLocation(null);
+        }, 3000);
       } else {
-        const data = await res.json();
-        setError(data.error || 'Error al registrar asistencia');
+        const err = await res.json();
+        setError(err.error || 'Error al registrar marcación');
       }
     } catch (e) {
-      setError('Error de conexión');
+      setError('Error de red al conectar con el servidor');
     } finally {
       setLoading(false);
     }

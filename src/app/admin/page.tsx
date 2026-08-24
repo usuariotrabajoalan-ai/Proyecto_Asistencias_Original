@@ -48,7 +48,7 @@ export default function AdminAttendancesPage() {
 
   const fetchEmployees = async () => {
     try {
-      const res = await fetch('/api/employees');
+      const res = await fetch('/api/employees', { cache: 'no-store' });
       if (res.ok) setEmployeesList(await res.json());
     } catch (e) {
       console.error(e);
@@ -62,7 +62,7 @@ export default function AdminAttendancesPage() {
       if (month) params.append('month', month);
       if (employeeId) params.append('employeeId', employeeId);
       
-      const res = await fetch(`/api/attendance?${params.toString()}`);
+      const res = await fetch(`/api/attendance?${params.toString()}`, { cache: 'no-store' });
       if (res.ok) setAttendances(await res.json());
     } catch (e) {
       console.error(e);
