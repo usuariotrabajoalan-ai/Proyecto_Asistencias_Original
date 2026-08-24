@@ -1,46 +1,41 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
-import { Camera, MapPin, Loader2, CheckCircle, Clock, Menu, X, Shield, Eye, EyeOff } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Camera, MapPin, Loader2, Clock, CheckCircle, Shield, X, Menu } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 export default function Home() {
+  const [ci, setCi] = useState('');
+  const [employee, setEmployee] = useState<any>(null);
+  const [photoBase64, setPhotoBase64] = useState<string | null>(null);
+  const [location, setLocation] = useState<{lat: number, lng: number} | null>(null);
+  const [observation, setObservation] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState<boolean>(false);
+  const [successName, setSuccessName] = useState('');
+  const [successType, setSuccessType] = useState('');
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [showLogin, setShowLogin] = useState(false);
+  const [adminPassword, setAdminPassword] = useState('');
+  const [showAdminPassword, setShowAdminPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState(false);
   const router = useRouter();
-  const [currentTime, setCurrentTime] = useState<Date | null>(null);
-  
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   useEffect(() => {
-    setCurrentTime(new Date());
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
 
-  const [ci, setCi] = useState('');
-  const [employee, setEmployee] = useState<any>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  const [successName, setSuccessName] = useState('');
-  const [successType, setSuccessType] = useState('');
-  
-  const [photoBase64, setPhotoBase64] = useState<string>('');
-  const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
-  const [observation, setObservation] = useState('');
-
-  // Estados para el Menú de Admin
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [showLogin, setShowLogin] = useState(false);
-  const [adminPassword, setAdminPassword] = useState('');
-  const [passwordError, setPasswordError] = useState(false);
-  const [showAdminPassword, setShowAdminPassword] = useState(false);
-
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Búsqueda automática cuando el CI tiene 6 o más caracteres
   useEffect(() => {
-    if (ci.length >= 5 && !employee) {
+    if (ci.length >= 6) {
       const timeoutId = setTimeout(() => {
         handleSearchEmployee(ci);
-      }, 500); // Debounce de medio segundo
+      }, 500);
       return () => clearTimeout(timeoutId);
     }
   }, [ci]);
@@ -50,10 +45,10 @@ export default function Home() {
     setLoading(true);
     setError('');
     try {
-      let res = await fetch(`/api/employees/${searchCi}`);
+      let res = await fetch('/api/employees/' + searchCi);
       if (!res.ok && res.status >= 500) {
         await new Promise(r => setTimeout(r, 1500));
-        res = await fetch(`/api/employees/${searchCi}`);
+        res = await fetch('/api/employees/' + searchCi);
       }
       if (res.ok) {
         const data = await res.json();
@@ -83,90 +78,58 @@ export default function Home() {
     }
   };
 
-  const requestLocation = () => {
-    return new Promise<{lat: number, lng: number}>((resolve, reject) => {
+  const requestLocation = (): Promise<{lat: number, lng: number}> => {
+    return new Promise((resolve, reject) => {
       if (!navigator.geolocation) {
-        reject('Geolocalización no soportada');
+        reject('Geolocalización no soportada por el navegador');
         return;
       }
       navigator.geolocation.getCurrentPosition(
-        (position) => {
-          resolve({
-            lat: position.coords.latitude,
-            lng: position.coords.longitude
-          });
-        },
-        (error) => {
-          reject('Permiso de ubicación denegado');
-        }
+        (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+        (err) => reject('No se pudo obtener la ubicación. ' + err.message)
       );
     });
   };
 
   const handleAttendance = async (type: 'ENTRADA' | 'SALIDA') => {
-    if (!employee) {
-      setError('Primero busca tu CI');
-      return;
-    }
-    if (!photoBase64) {
-      setError('Debes tomarte una selfie');
-      return;
-    }
-
+    if (!employee || !location) return;
     setLoading(true);
     setError('');
     
     try {
-      // Intentar obtener ubicación
-      let loc = location;
-      if (!loc) {
-        try {
-          loc = await requestLocation();
-    if (!employee || !location) {
-      setError('Asegúrate de buscar tu CI y tener ubicación');
-      return;
-    }
-    setLoading(true);
-    setError('');
-    try {
+      const payload = {
+        ci,
+        type,
+        latitude: location.lat,
+        longitude: location.lng,
+        photoBase64,
+        observation: observation.trim() || null
+      };
       let res = await fetch('/api/attendance', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ci,
-          type,
-          latitude: location.lat,
-          longitude: location.lng,
-          photoBase64,
-          observation: observation.trim() || null
-        })
+        body: JSON.stringify(payload)
       });
+      
       if (!res.ok && res.status >= 500) {
         await new Promise(r => setTimeout(r, 1500));
         res = await fetch('/api/attendance', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            ci,
-            type,
-            latitude: location.lat,
-            longitude: location.lng,
-            photoBase64,
-            observation: observation.trim() || null
-          })
+          body: JSON.stringify(payload)
         });
       }
       
       if (res.ok) {
         setSuccessType(type);
         setSuccessName(`${employee.firstName} ${employee.lastName}`);
-        setSuccess('ok');
+        setSuccess(true);
         setTimeout(() => {
           setCi('');
           setEmployee(null);
           setPhotoBase64('');
           setObservation('');
-          setSuccess('');
+          setSuccess(false);
           setLocation(null);
         }, 3000);
       } else {
@@ -194,16 +157,13 @@ export default function Home() {
         setPasswordError(true);
         setTimeout(() => setPasswordError(false), 2000);
       }
-    } catch(err) {
-      setPasswordError(true);
-      setTimeout(() => setPasswordError(false), 2000);
+    } catch (error) {
+      alert('Error de conexión');
     }
   };
 
   return (
     <main className="min-h-screen bg-gray-50 flex flex-col justify-between items-center px-4 py-6 sm:p-8 relative">
-      
-      {/* Botón Sandwich (Menú) */}
       <div className="absolute top-4 right-4 sm:top-8 sm:right-8 z-40">
         <button 
           onClick={() => setMenuOpen(!menuOpen)}
@@ -212,7 +172,6 @@ export default function Home() {
           <Menu className="w-6 h-6" />
         </button>
 
-        {/* Dropdown Menú */}
         {menuOpen && (
           <div className="absolute top-14 right-0 w-56 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden animate-in slide-in-from-top-2">
             <button 
@@ -226,7 +185,6 @@ export default function Home() {
         )}
       </div>
 
-      {/* Modal de Inicio de Sesión Admin */}
       {showLogin && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 animate-in fade-in">
           <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm relative text-black">
@@ -254,18 +212,16 @@ export default function Home() {
                   className={`w-full pl-4 pr-12 py-3 border ${passwordError ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-red-800'} rounded-xl focus:outline-none focus:ring-2`}
                   autoFocus
                 />
-                <button 
-                  type="button" 
-                  onClick={() => setShowAdminPassword(!showAdminPassword)}
-                  className="absolute right-3 top-3.5 text-gray-400 hover:text-gray-600"
-                >
-                  {showAdminPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                </button>
-                {passwordError && <p className="text-red-500 text-xs mt-2 font-medium">Contraseña incorrecta.</p>}
               </div>
+              
+              {passwordError && (
+                <p className="text-red-500 text-sm font-medium animate-in slide-in-from-top-1">
+                  Contraseña incorrecta
+                </p>
+              )}
               <button 
                 type="submit"
-                className="w-full bg-red-800 text-white font-bold py-3 rounded-xl hover:bg-red-900 shadow-md transition-colors"
+                className="w-full bg-red-800 text-white font-bold py-3 rounded-xl hover:bg-red-900 transition-colors shadow-md"
               >
                 Ingresar al Panel
               </button>
@@ -274,17 +230,15 @@ export default function Home() {
         </div>
       )}
 
-      <div className="w-full max-w-md bg-white rounded-xl shadow-lg p-5 sm:p-8 space-y-6 border-t-4 border-red-800 flex-grow-0 mb-8 mt-12 sm:mt-0">
-        <div className="flex flex-col items-center justify-center space-y-4">
-          <img src="/logo.jpg" alt="Logo AFEMEC" className="h-20 sm:h-24 object-contain" />
-          <h1 className="text-xl sm:text-2xl font-bold text-center text-red-900 leading-tight">
-            Control de Asistencia
-          </h1>
+      <div className="bg-white p-6 sm:p-10 rounded-3xl shadow-xl w-full max-w-md border border-gray-100 flex-grow-0 mb-8 mt-12 sm:mt-0 relative z-10">
+        
+        <div className="flex flex-col items-center mb-8 pb-6 border-b border-gray-100">
+          <img src="/logo.jpg" alt="Logo AFEMEC" className="h-20 sm:h-24 object-contain mb-4" />
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-red-900 mb-2">Control de Asistencia</h1>
           
-          {/* Reloj en tiempo real */}
-          {currentTime && (
-            <div className="flex flex-col items-center bg-gray-100 rounded-lg px-4 py-2 text-gray-700 shadow-sm w-full">
-              <span className="text-sm font-medium capitalize">
+          {!success && (
+            <div className="flex flex-col items-center bg-gray-50 px-6 py-3 rounded-2xl border border-gray-100 w-full">
+              <span className="text-sm font-medium text-gray-500 uppercase tracking-wider">
                 {new Intl.DateTimeFormat('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(currentTime)}
               </span>
               <div className="flex items-center gap-2 mt-1">
@@ -317,7 +271,7 @@ export default function Home() {
                   value={ci}
                   onChange={(e) => {
                     setCi(e.target.value);
-                    if (e.target.value === '') setEmployee(null); // Resetear si borra
+                    if (e.target.value === '') setEmployee(null);
                   }}
                   className="flex-1 px-4 py-3 sm:py-2 border rounded-lg focus:ring-2 focus:ring-red-800 outline-none text-black text-lg sm:text-base"
                   placeholder="Ej: 1234567"
@@ -392,7 +346,7 @@ export default function Home() {
                           const loc = await requestLocation();
                           setLocation(loc);
                         } catch (e) {
-                          setError(e as string + ' (Si estás en el celular, revisa que el sitio tenga permiso de ubicación o accede vía HTTPS)');
+                          setError(e as string + ' (Revisa que el sitio tenga permiso de ubicación)');
                         } finally {
                           setLoading(false);
                         }
@@ -402,7 +356,6 @@ export default function Home() {
                     >
                       {loading ? <Loader2 className="animate-spin" /> : '📍 Permitir y Obtener Ubicación'}
                     </button>
-                    <p className="text-xs text-gray-500 text-center">Debes permitir la ubicación para registrar tu asistencia.</p>
                   </div>
                 ) : (
                   <div className="pt-2 animate-in fade-in zoom-in duration-300">
@@ -433,7 +386,6 @@ export default function Home() {
         )}
       </div>
 
-      {/* Footer Image */}
       <div className="w-full max-w-md flex justify-center pb-4 opacity-90 hover:opacity-100 transition-opacity">
         <img src="/footer.png" alt="Desarrollado por AR Software Engineer" className="w-64 sm:w-80 object-contain mix-blend-multiply" />
       </div>
