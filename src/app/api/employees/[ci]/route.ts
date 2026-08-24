@@ -6,7 +6,7 @@ export async function GET(
   context: { params: Promise<{ ci: string }> }
 ) {
   try {
-    const { ci } = await params;
+    const { ci } = await context.params;
     // Buscamos si es un ID de prisma (cuid) o una cédula
     const isId = ci.startsWith('c');
     
@@ -26,7 +26,7 @@ export async function PUT(
   context: { params: Promise<{ ci: string }> }
 ) {
   try {
-    const { ci: paramId } = await params;
+    const { ci: paramId } = await context.params;
     const body = await request.json();
     const { ci, firstName, lastName } = body;
     
@@ -48,7 +48,7 @@ export async function DELETE(
   context: { params: Promise<{ ci: string }> }
 ) {
   try {
-    const { ci: paramId } = await params;
+    const { ci: paramId } = await context.params;
     
     // Identificamos si nos pasaron un ID o una CI
     const isId = paramId.startsWith('c');
@@ -67,4 +67,5 @@ export async function DELETE(
     return NextResponse.json({ error: 'Error al eliminar' }, { status: 500 });
   }
 }
+
 

@@ -6,7 +6,7 @@ export async function PUT(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
+    const { id } = await context.params;
     const body = await request.json();
     const { observation } = body;
 
@@ -27,7 +27,7 @@ export async function DELETE(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
+    const { id } = await context.params;
     await prisma.attendanceRecord.delete({
       where: { id },
     });
@@ -37,4 +37,5 @@ export async function DELETE(
     return NextResponse.json({ error: 'Error al eliminar registro' }, { status: 500 });
   }
 }
+
 
