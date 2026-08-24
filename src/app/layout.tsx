@@ -15,6 +15,16 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Sistema de Asistencia AFEMEC",
   description: "Plataforma de control de marcaciones para funcionarios",
+  manifest: "/manifest.json",
+  icons: {
+    icon: "/logo.jpg",
+    apple: "/logo.jpg",
+  },
+  appleWebApp: {
+    title: "fichero sede social",
+    statusBarStyle: "default",
+    capable: true,
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -28,3 +38,4 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     </html>
   );
 }
+
