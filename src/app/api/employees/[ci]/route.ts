@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 
@@ -67,5 +68,6 @@ export async function DELETE(
     return NextResponse.json({ error: 'Error al eliminar' }, { status: 500 });
   }
 }
+
 
 
