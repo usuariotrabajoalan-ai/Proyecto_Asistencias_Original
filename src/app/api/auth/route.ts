@@ -5,9 +5,9 @@ export async function POST(request: Request) {
   try {
     const { password } = await request.json();
     
-    let config = await prisma.config.findUnique({ where: { id: 'main' } });
+    let config = await prisma.asistenciaConfig.findUnique({ where: { id: 'main' } });
     if (!config) {
-      config = await prisma.config.create({ data: { id: 'main', adminPassword: 'admin123' } });
+      config = await prisma.asistenciaConfig.create({ data: { id: 'main', adminPassword: 'admin123' } });
     }
 
     if (password === config.adminPassword) {
@@ -24,16 +24,16 @@ export async function PUT(request: Request) {
   try {
     const { currentPassword, newPassword } = await request.json();
 
-    let config = await prisma.config.findUnique({ where: { id: 'main' } });
+    let config = await prisma.asistenciaConfig.findUnique({ where: { id: 'main' } });
     if (!config) {
-      config = await prisma.config.create({ data: { id: 'main', adminPassword: 'admin123' } });
+      config = await prisma.asistenciaConfig.create({ data: { id: 'main', adminPassword: 'admin123' } });
     }
 
     if (currentPassword !== config.adminPassword) {
       return NextResponse.json({ error: 'La contraseña actual es incorrecta' }, { status: 401 });
     }
 
-    await prisma.config.update({
+    await prisma.asistenciaConfig.update({
       where: { id: 'main' },
       data: { adminPassword: newPassword }
     });
@@ -43,3 +43,4 @@ export async function PUT(request: Request) {
     return NextResponse.json({ error: 'Error del servidor' }, { status: 500 });
   }
 }
+
