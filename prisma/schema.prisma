@@ -1,0 +1,37 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Employee {
+  id        String   @id @default(cuid())
+  ci        String   @unique
+  firstName String
+  lastName  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  attendances AttendanceRecord[]
+}
+
+model AttendanceRecord {
+  id          String   @id @default(cuid())
+  employeeId  String
+  type        String   // "ENTRADA" o "SALIDA"
+  timestamp   DateTime @default(now())
+  latitude    Float?
+  longitude   Float?
+  photoBase64 String?  // Guardaremos la imagen en base64 para simplificar en SQLite
+  observation String?
+  
+  employee    Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+}
+
+model Config {
+  id            String @id @default("main")
+  adminPassword String @default("admin123")
+}
