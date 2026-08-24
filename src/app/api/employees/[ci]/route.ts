@@ -3,7 +3,7 @@ import prisma from '@/lib/prisma';
 
 export async function GET(
   request: Request,
-  { params }: { params: { ci: string } }
+  context: { params: Promise<{ ci: string }> }
 ) {
   try {
     const { ci } = await params;
@@ -23,7 +23,7 @@ export async function GET(
 
 export async function PUT(
   request: Request,
-  { params }: { params: { ci: string } }
+  context: { params: Promise<{ ci: string }> }
 ) {
   try {
     const { ci: paramId } = await params;
@@ -45,7 +45,7 @@ export async function PUT(
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { ci: string } }
+  context: { params: Promise<{ ci: string }> }
 ) {
   try {
     const { ci: paramId } = await params;
@@ -67,3 +67,4 @@ export async function DELETE(
     return NextResponse.json({ error: 'Error al eliminar' }, { status: 500 });
   }
 }
+

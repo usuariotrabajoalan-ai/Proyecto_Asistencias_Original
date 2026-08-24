@@ -3,7 +3,7 @@ import prisma from '@/lib/prisma';
 
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
@@ -24,7 +24,7 @@ export async function PUT(
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
@@ -37,3 +37,4 @@ export async function DELETE(
     return NextResponse.json({ error: 'Error al eliminar registro' }, { status: 500 });
   }
 }
+
