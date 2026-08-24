@@ -50,13 +50,20 @@ export default function Home() {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch(`/api/employees/${searchCi}`);
+      let res = await fetch(`/api/employees/${searchCi}`);
+      if (!res.ok && res.status >= 500) {
+        await new Promise(r => setTimeout(r, 1500));
+        res = await fetch(`/api/employees/${searchCi}`);
+      }
       if (res.ok) {
         const data = await res.json();
         setEmployee(data);
-      } else {
+      } else if (res.status === 404) {
         setEmployee(null);
         setError('Empleado no encontrado');
+      } else {
+        setEmployee(null);
+        setError('Error del servidor al buscar');
       }
     } catch (e) {
       setError('Error al buscar empleado');
