@@ -153,9 +153,12 @@ export default function Home() {
       });
       if (res.ok) {
         router.push('/admin');
-      } else {
+      } else if (res.status === 401) {
         setPasswordError(true);
         setTimeout(() => setPasswordError(false), 2000);
+      } else {
+        const errorData = await res.json().catch(() => ({}));
+        alert('Error del servidor al iniciar sesión. ¿Configuraste la base de datos en Vercel? ' + (errorData.error || res.statusText));
       }
     } catch (error) {
       alert('Error de conexión');
