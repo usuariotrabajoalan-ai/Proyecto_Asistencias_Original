@@ -1,11 +1,27 @@
 import Link from 'next/link';
 import { Users, Clock, Settings, LogOut } from 'lucide-react';
+import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
 
-export default function AdminLayout({
+async function logoutAction() {
+  "use server";
+  const cookieStore = await cookies();
+  cookieStore.delete('admin_session');
+  redirect('/');
+}
+
+export default async function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const cookieStore = await cookies();
+  const session = cookieStore.get('admin_session');
+  
+  if (!session || session.value !== 'authenticated') {
+    redirect('/');
+  }
+
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col md:flex-row">
       <aside className="w-full md:w-64 bg-white shadow-md flex flex-col md:min-h-screen">
@@ -29,10 +45,12 @@ export default function AdminLayout({
           </Link>
         </nav>
         <div className="p-4 border-t">
-          <Link href="/" className="flex items-center gap-2 p-3 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-xl text-gray-700 font-medium transition-colors">
-            <LogOut className="w-5 h-5 text-red-800" />
-            Volver al Fichero
-          </Link>
+          <form action={logoutAction}>
+            <button type="submit" className="w-full flex items-center justify-center gap-2 p-3 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-xl text-gray-700 font-medium transition-colors">
+              <LogOut className="w-5 h-5 text-red-800" />
+              Cerrar Sesión
+            </button>
+          </form>
         </div>
       </aside>
       <main className="flex-1 p-4 md:p-8 overflow-auto w-full">

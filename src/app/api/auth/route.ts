@@ -12,7 +12,14 @@ export async function POST(request: Request) {
     }
 
     if (password === config.adminPassword) {
-      return NextResponse.json({ success: true });
+      const response = NextResponse.json({ success: true });
+      response.cookies.set('admin_session', 'authenticated', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        maxAge: 60 * 60 * 24,
+        path: '/'
+      });
+      return response;
     } else {
       return NextResponse.json({ error: 'Contraseña incorrecta' }, { status: 401 });
     }
