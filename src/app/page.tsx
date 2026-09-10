@@ -178,7 +178,7 @@ export default function Home() {
         {menuOpen && (
           <div className="absolute top-14 right-0 w-56 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden animate-in slide-in-from-top-2">
             <button 
-              onClick={() => { setMenuOpen(false); setShowLogin(true); }}
+              onClick={() => { setMenuOpen(false); router.push('/admin'); }}
               className="w-full px-4 py-3 text-left flex items-center gap-3 text-gray-700 hover:bg-gray-50 hover:text-red-800 transition-colors font-medium"
             >
               <Shield className="w-5 h-5" />
@@ -187,51 +187,6 @@ export default function Home() {
           </div>
         )}
       </div>
-
-      {showLogin && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm relative text-black">
-            <button 
-              onClick={() => { setShowLogin(false); setAdminPassword(''); setPasswordError(false); }}
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
-            >
-              <X className="w-5 h-5" />
-            </button>
-            <div className="flex flex-col items-center mb-6 mt-2">
-              <div className="w-12 h-12 bg-red-50 rounded-full flex items-center justify-center mb-3">
-                <Shield className="w-6 h-6 text-red-800" />
-              </div>
-              <h2 className="text-xl font-bold text-gray-800">Acceso Restringido</h2>
-              <p className="text-sm text-gray-500 mt-1">Ingrese la contraseña administrativa</p>
-            </div>
-            
-            <form onSubmit={handleAdminLogin} className="space-y-4">
-              <div className="relative">
-                <input
-                  type={showAdminPassword ? "text" : "password"}
-                  value={adminPassword}
-                  onChange={(e) => setAdminPassword(e.target.value)}
-                  placeholder="Contraseña"
-                  className={`w-full pl-4 pr-12 py-3 border ${passwordError ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-red-800'} rounded-xl focus:outline-none focus:ring-2`}
-                  autoFocus
-                />
-              </div>
-              
-              {passwordError && (
-                <p className="text-red-500 text-sm font-medium animate-in slide-in-from-top-1">
-                  Contraseña incorrecta
-                </p>
-              )}
-              <button 
-                type="submit"
-                className="w-full bg-red-800 text-white font-bold py-3 rounded-xl hover:bg-red-900 transition-colors shadow-md"
-              >
-                Ingresar al Panel
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
 
       <div className="bg-white p-6 sm:p-10 rounded-3xl shadow-xl w-full max-w-md border border-gray-100 flex-grow-0 mb-8 mt-12 sm:mt-0 relative z-10">
         

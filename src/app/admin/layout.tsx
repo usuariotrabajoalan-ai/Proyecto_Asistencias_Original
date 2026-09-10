@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { Users, Clock, Settings, LogOut } from 'lucide-react';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
+import AdminLoginForm from '@/components/AdminLoginForm';
 
 async function logoutAction() {
   "use server";
@@ -19,7 +20,7 @@ export default async function AdminLayout({
   const session = cookieStore.get('admin_session');
   
   if (!session || session.value !== 'authenticated') {
-    redirect('/');
+    return <AdminLoginForm />;
   }
 
   return (
