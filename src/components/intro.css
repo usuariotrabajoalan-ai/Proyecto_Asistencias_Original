@@ -1,0 +1,71 @@
+:root {
+  --afemec-bg: #7f1d1d; /* bg-red-900 */
+  --afemec-line: rgba(254, 202, 202, 0.15); /* bg-red-200 with low opacity */
+}
+
+/* Grid Técnico */
+.grid-steel {
+  background-image: 
+    linear-gradient(var(--afemec-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--afemec-line) 1px, transparent 1px),
+    linear-gradient(var(--afemec-line) 0.5px, transparent 0.5px),
+    linear-gradient(90deg, var(--afemec-line) 0.5px, transparent 0.5px);
+  background-size: 120px 120px, 120px 120px, 24px 24px, 24px 24px;
+  background-color: var(--afemec-bg);
+}
+
+@keyframes ds-draw {
+  from { stroke-dashoffset: 100; }
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes ds-in {
+  from { opacity: 0; transform: translateY(18px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes ds-wipe {
+  from { clip-path: inset(0 0 0 0); }
+  to { clip-path: inset(0 0 100% 0); }
+}
+
+@keyframes ds-grid {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes ds-rule {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+.draw {
+  stroke-dasharray: 100;
+  stroke-dashoffset: 100;
+  animation: ds-draw 1.45s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+  animation-delay: var(--delay, 0s);
+}
+
+.rise {
+  opacity: 0;
+  animation: ds-in 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+  animation-delay: var(--delay, 0s);
+}
+
+.wipe {
+  animation: ds-wipe 0.85s cubic-bezier(0.7, 0, 0.3, 1) forwards;
+  animation-delay: 3.15s;
+}
+
+.grid-fade {
+  opacity: 0;
+  animation: ds-grid 1s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+  animation-delay: 0.1s;
+}
+
+.rule-grow {
+  transform: scaleX(0);
+  transform-origin: left;
+  animation: ds-rule 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+  animation-delay: var(--delay, 0s);
+}
