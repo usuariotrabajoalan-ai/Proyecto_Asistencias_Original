@@ -36,20 +36,20 @@ export default function IntroSplash() {
         <SplashLogo />
         
         {/* Título animado en cascada */}
-        <div className="mt-8 flex gap-3 text-4xl sm:text-5xl font-extrabold text-white tracking-widest uppercase">
+        <div className="mt-6 sm:mt-8 flex gap-2 sm:gap-3 text-3xl sm:text-4xl md:text-5xl font-extrabold text-white tracking-widest uppercase text-center px-4">
           <span className="rise drop-shadow-md" style={{ "--delay": "1.85s" } as React.CSSProperties}>SISTEMA</span>
           <span className="rise drop-shadow-md text-red-200" style={{ "--delay": "2.0s" } as React.CSSProperties}>AFEMEC</span>
         </div>
         
         {/* Línea divisoria */}
         <div 
-          className="w-full h-[2px] bg-red-400/50 mt-5 rule-grow shadow-[0_0_10px_rgba(248,113,113,0.5)]"
+          className="w-[80vw] max-w-md h-[2px] bg-red-400/50 mt-4 sm:mt-5 rule-grow shadow-[0_0_10px_rgba(248,113,113,0.5)]"
           style={{ "--delay": "2.3s" } as React.CSSProperties}
         ></div>
         
         {/* Subtítulo */}
         <span 
-          className="rise mt-5 text-red-100 tracking-[0.3em] text-sm sm:text-base font-bold bg-black/20 px-4 py-1.5 rounded-full"
+          className="rise mt-4 sm:mt-5 text-red-100 tracking-[0.2em] sm:tracking-[0.3em] text-[10px] sm:text-xs md:text-sm font-bold bg-black/20 px-4 py-1.5 rounded-full text-center"
           style={{ "--delay": "2.5s" } as React.CSSProperties}
         >
           CONTROL DE ASISTENCIAS
