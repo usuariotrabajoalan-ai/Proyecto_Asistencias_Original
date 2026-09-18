@@ -18,8 +18,9 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Ignorar peticiones que no sean GET o que sean a nuestra API
-  if (event.request.method !== 'GET' || event.request.url.includes('/api/')) return;
+  // Ignorar peticiones que no sean GET. También ignoramos la API, EXCEPTO la ruta de búsqueda de empleados para que funcione offline.
+  if (event.request.method !== 'GET') return;
+  if (event.request.url.includes('/api/') && !event.request.url.includes('/api/employees/')) return;
 
   // Estrategia: Stale-While-Revalidate (Sirve del caché rápido y actualiza en fondo)
   event.respondWith(
