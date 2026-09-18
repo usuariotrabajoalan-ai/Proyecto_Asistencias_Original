@@ -28,6 +28,7 @@ export const metadata: Metadata = {
 };
 
 import IntroSplash from "@/components/IntroSplash";
+import PwaRegister from "@/components/PwaRegister";
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
@@ -37,6 +38,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
+        <PwaRegister />
         <IntroSplash />
         {children}
       </body>

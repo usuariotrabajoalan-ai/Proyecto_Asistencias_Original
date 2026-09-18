@@ -4,6 +4,8 @@ import { useState, useEffect, useRef } from 'react';
 import { Camera, MapPin, Loader2, Clock, CheckCircle, Shield, X, Menu } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
+import LivenessCamera from '@/components/LivenessCamera';
+
 export default function Home() {
   const [ci, setCi] = useState('');
   const [employee, setEmployee] = useState<any>(null);
@@ -91,20 +93,35 @@ export default function Home() {
     });
   };
 
+  const resetState = () => {
+    setCi('');
+    setEmployee(null);
+    setPhotoBase64(null);
+    setObservation('');
+    setSuccess(false);
+    setLocation(null);
+  };
+
   const handleAttendance = async (type: 'ENTRADA' | 'SALIDA') => {
-    if (!employee || !location) return;
+    if (!employee || !location || !photoBase64) return;
     setLoading(true);
     setError('');
     
+    const payload = {
+      ci,
+      type,
+      latitude: location.lat,
+      longitude: location.lng,
+      photoBase64,
+      observation: observation.trim() || null,
+      timestamp: new Date().toISOString()
+    };
+
     try {
-      const payload = {
-        ci,
-        type,
-        latitude: location.lat,
-        longitude: location.lng,
-        photoBase64,
-        observation: observation.trim() || null
-      };
+      if (!navigator.onLine) {
+        throw new Error('OFFLINE_MODE');
+      }
+
       let res = await fetch('/api/attendance', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -124,20 +141,43 @@ export default function Home() {
         setSuccessType(type);
         setSuccessName(`${employee.firstName} ${employee.lastName}`);
         setSuccess(true);
-        setTimeout(() => {
-          setCi('');
-          setEmployee(null);
-          setPhotoBase64('');
-          setObservation('');
-          setSuccess(false);
-          setLocation(null);
-        }, 3000);
+        setTimeout(resetState, 3000);
       } else {
         const err = await res.json();
         setError(err.error || 'Error al registrar marcación');
       }
-    } catch (e) {
-      setError('Error de red al conectar con el servidor');
+    } catch (e: any) {
+      if (e.message === 'OFFLINE_MODE' || e.message.includes('Failed to fetch') || e.name === 'TypeError') {
+        try {
+          const { saveOfflinePunch } = await import('@/lib/idb');
+          await saveOfflinePunch({
+            ci,
+            type,
+            latitude: location.lat,
+            longitude: location.lng,
+            photoBase64: photoBase64,
+            timestamp: payload.timestamp
+          });
+          
+          if ('serviceWorker' in navigator && navigator.serviceWorker.ready) {
+            try {
+              const reg = await navigator.serviceWorker.ready;
+              if ('sync' in reg) {
+                await (reg as any).sync.register('sync-punches');
+              }
+            } catch (syncErr) { console.error(syncErr); }
+          }
+          
+          setSuccessType(type);
+          setSuccessName(`${employee.firstName} ${employee.lastName} (Modo Sin Conexión)`);
+          setSuccess(true);
+          setTimeout(resetState, 3000);
+        } catch (idbErr) {
+          setError('Sin conexión a internet y falló el almacenamiento local.');
+        }
+      } else {
+        setError('Error de red al conectar con el servidor');
+      }
     } finally {
       setLoading(false);
     }
@@ -256,30 +296,15 @@ export default function Home() {
             {employee && (
               <div className="space-y-5 animate-in fade-in duration-500">
                 <div className="flex flex-col items-center gap-4 mt-2">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    capture="user"
-                    ref={fileInputRef}
-                    onChange={handlePhotoCapture}
-                    className="hidden"
-                  />
-                  
                   {photoBase64 ? (
                     <div className="relative">
                       <img src={photoBase64} alt="Selfie" className="w-40 h-40 sm:w-48 sm:h-48 rounded-full object-cover border-4 border-red-100 shadow-sm" />
-                      <button onClick={() => setPhotoBase64('')} className="absolute bottom-2 right-2 bg-red-600 text-white rounded-full px-3 py-1 text-xs hover:bg-red-700 shadow-md font-medium">
+                      <button onClick={() => setPhotoBase64(null)} className="absolute bottom-2 right-2 bg-red-600 text-white rounded-full px-3 py-1 text-xs hover:bg-red-700 shadow-md font-medium">
                         Cambiar
                       </button>
                     </div>
                   ) : (
-                    <button
-                      onClick={() => fileInputRef.current?.click()}
-                      className="flex flex-col items-center justify-center gap-2 w-40 h-40 sm:w-48 sm:h-48 bg-gray-100 text-gray-600 rounded-full border-2 border-dashed border-gray-300 hover:bg-gray-200 hover:text-red-800 transition-colors"
-                    >
-                      <Camera className="w-10 h-10 sm:w-12 sm:h-12" />
-                      <span className="font-medium text-sm sm:text-base">Tomar Selfie</span>
-                    </button>
+                    <LivenessCamera onCapture={(img) => setPhotoBase64(img)} />
                   )}
                 </div>
 
