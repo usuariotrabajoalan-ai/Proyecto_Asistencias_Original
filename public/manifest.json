@@ -1,6 +1,6 @@
-﻿{
-  "name": "fichero sede social",
-  "short_name": "Fichero",
+{
+  "name": "Control de Asistencia AFEMEC",
+  "short_name": "Asistencias",
   "description": "Control de Asistencia AFEMEC",
   "start_url": "/",
   "display": "standalone",

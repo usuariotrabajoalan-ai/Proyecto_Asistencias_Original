@@ -29,6 +29,7 @@ export const metadata: Metadata = {
 
 import IntroSplash from "@/components/IntroSplash";
 import PwaRegister from "@/components/PwaRegister";
+import InstallPrompt from "@/components/InstallPrompt";
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
@@ -40,6 +41,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full flex flex-col">
         <PwaRegister />
         <IntroSplash />
+        <InstallPrompt />
         {children}
       </body>
     </html>
