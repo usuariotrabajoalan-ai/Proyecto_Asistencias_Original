@@ -5,6 +5,7 @@ import { Camera, MapPin, Loader2, Clock, CheckCircle, Shield, X, Menu } from 'lu
 import { useRouter } from 'next/navigation';
 
 import LivenessCamera from '@/components/LivenessCamera';
+import { evaluateLocation } from '@/lib/geo';
 
 export default function Home() {
   const [ci, setCi] = useState('');
@@ -17,6 +18,7 @@ export default function Home() {
   const [success, setSuccess] = useState<boolean>(false);
   const [successName, setSuccessName] = useState('');
   const [successType, setSuccessType] = useState('');
+  const [successSede, setSuccessSede] = useState('');
   const [currentTime, setCurrentTime] = useState(new Date());
 
   const [menuOpen, setMenuOpen] = useState(false);
@@ -100,6 +102,7 @@ export default function Home() {
     setObservation('');
     setSuccess(false);
     setLocation(null);
+    setSuccessSede('');
   };
 
   const handleAttendance = async (type: 'ENTRADA' | 'SALIDA') => {
@@ -116,6 +119,8 @@ export default function Home() {
       observation: observation.trim() || null,
       timestamp: new Date().toISOString()
     };
+
+    const evaluatedLoc = location ? evaluateLocation(location.lat, location.lng) : null;
 
     try {
       if (!navigator.onLine) {
@@ -140,8 +145,9 @@ export default function Home() {
       if (res.ok) {
         setSuccessType(type);
         setSuccessName(`${employee.firstName} ${employee.lastName}`);
+        if (evaluatedLoc) setSuccessSede(evaluatedLoc.statusLabel);
         setSuccess(true);
-        setTimeout(resetState, 3000);
+        setTimeout(resetState, 3500);
       } else {
         const err = await res.json();
         setError(err.error || 'Error al registrar marcación');
@@ -170,8 +176,9 @@ export default function Home() {
           
           setSuccessType(type);
           setSuccessName(`${employee.firstName} ${employee.lastName} (Modo Sin Conexión)`);
+          if (evaluatedLoc) setSuccessSede(evaluatedLoc.statusLabel);
           setSuccess(true);
-          setTimeout(resetState, 3000);
+          setTimeout(resetState, 3500);
         } catch (idbErr) {
           setError('Sin conexión a internet y falló el almacenamiento local.');
         }
@@ -257,6 +264,11 @@ export default function Home() {
               Ha registrado su {successType} de manera exitosa<br/>
               <span className="font-bold text-black">{successName}</span>
             </p>
+            {successSede && (
+              <div className="text-sm font-semibold text-gray-700 bg-gray-50 border border-gray-200 px-4 py-2 rounded-xl text-center">
+                📍 {successSede}
+              </div>
+            )}
           </div>
         ) : (
           <>
@@ -342,9 +354,19 @@ export default function Home() {
                   </div>
                 ) : (
                   <div className="pt-2 animate-in fade-in zoom-in duration-300">
-                    <div className="bg-green-50 border border-green-200 text-green-800 px-4 py-2 rounded-lg mb-4 flex items-center justify-center gap-2 font-medium">
-                      <MapPin className="w-5 h-5" /> Ubicación Obtenida
-                    </div>
+                    {(() => {
+                      const evalLoc = evaluateLocation(location.lat, location.lng);
+                      return (
+                        <div className={`px-4 py-2.5 rounded-xl mb-4 flex items-center justify-center gap-2 font-semibold text-sm border ${
+                          evalLoc.inRange
+                            ? 'bg-green-50 border-green-200 text-green-800'
+                            : 'bg-amber-50 border-amber-200 text-amber-800'
+                        }`}>
+                          <MapPin className="w-5 h-5 shrink-0" />
+                          <span>{evalLoc.statusLabel}</span>
+                        </div>
+                      );
+                    })()}
                     <div className="grid grid-cols-2 gap-3 sm:gap-4">
                       <button
                         onClick={() => handleAttendance('ENTRADA')}
