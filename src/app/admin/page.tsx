@@ -313,41 +313,23 @@ export default function AdminAttendancesPage() {
         </button>
       </div>
 
-      {/* KPIs Innovadores Multi-Sede */}
+      {/* KPIs Principales */}
       {!loading && attendances.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          <div className="bg-white p-3.5 rounded-xl border border-gray-100 shadow-sm flex flex-col justify-center items-center">
-            <span className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-1">Total</span>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex flex-col justify-center items-center">
+            <span className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-1">Total Marcaciones</span>
             <span className="text-2xl font-black text-gray-800">{attendances.length}</span>
           </div>
-          <div className="bg-white p-3.5 rounded-xl border border-gray-100 shadow-sm flex flex-col justify-center items-center">
+          <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex flex-col justify-center items-center">
             <span className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-1">Entradas</span>
             <span className="text-2xl font-black text-green-600">{attendances.filter(a => a.type === 'ENTRADA').length}</span>
           </div>
-          <div className="bg-white p-3.5 rounded-xl border border-gray-100 shadow-sm flex flex-col justify-center items-center">
+          <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex flex-col justify-center items-center">
             <span className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-1">Salidas</span>
             <span className="text-2xl font-black text-red-600">{attendances.filter(a => a.type === 'SALIDA').length}</span>
           </div>
-          <div className="bg-white p-3.5 rounded-xl border border-gray-100 shadow-sm flex flex-col justify-center items-center">
-            <span className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-1">🌳 Sede Social</span>
-            <span className="text-2xl font-black text-emerald-600">
-              {attendances.filter(a => {
-                const e = evaluateLocation(a.latitude, a.longitude);
-                return e.inRange && e.sede.id === 'SEDE_SOCIAL';
-              }).length}
-            </span>
-          </div>
-          <div className="bg-white p-3.5 rounded-xl border border-gray-100 shadow-sm flex flex-col justify-center items-center">
-            <span className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-1">🏢 Sede Adm.</span>
-            <span className="text-2xl font-black text-blue-600">
-              {attendances.filter(a => {
-                const e = evaluateLocation(a.latitude, a.longitude);
-                return e.inRange && e.sede.id === 'SEDE_ADMINISTRATIVA';
-              }).length}
-            </span>
-          </div>
-          <div className="bg-white p-3.5 rounded-xl border border-gray-100 shadow-sm flex flex-col justify-center items-center">
-            <span className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-1">Fuera Rango</span>
+          <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex flex-col justify-center items-center">
+            <span className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-1">Fuera de Rango</span>
             <span className="text-2xl font-black text-orange-500">
               {attendances.filter(a => !evaluateLocation(a.latitude, a.longitude).inRange).length}
             </span>

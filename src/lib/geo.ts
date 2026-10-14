@@ -94,7 +94,7 @@ export function evaluateLocation(
     inRange: false,
     sede: closestSede,
     distance: minDistance,
-    statusLabel: `❌ Fuera (${minDistance}m de ${closestSede.shortName})`,
-    shortLabel: `Fuera (${closestSede.shortName}: ${minDistance}m)`
+    statusLabel: '❌ Fuera de rango',
+    shortLabel: 'Fuera de rango'
   };
 }
