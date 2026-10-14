@@ -5,25 +5,7 @@ import { Download, MessageSquare, MapPin, Search, Trash2, Loader2 } from 'lucide
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
 
-// Configuración de la Sede Social (AFEMEC)
-const SEDE_LAT = -25.356318;
-const SEDE_LNG = -57.624452;
-const MAX_DISTANCE_METERS = 200; // Radio de tolerancia en metros (200m)
-
-// Función para calcular distancia (Haversine)
-function getDistanceInMeters(lat1: number, lon1: number, lat2: number, lon2: number) {
-  const R = 6371e3; // Radio de la tierra en metros
-  const p1 = lat1 * Math.PI / 180;
-  const p2 = lat2 * Math.PI / 180;
-  const dp = (lat2 - lat1) * Math.PI / 180;
-  const dl = (lon2 - lon1) * Math.PI / 180;
-
-  const a = Math.sin(dp/2) * Math.sin(dp/2) +
-            Math.cos(p1) * Math.cos(p2) *
-            Math.sin(dl/2) * Math.sin(dl/2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-  return Math.round(R * c);
-}
+import { evaluateLocation, SEDES, getDistanceInMeters } from '@/lib/geo';
 
 export default function AdminAttendancesPage() {
   const [attendances, setAttendances] = useState<any[]>([]);
@@ -32,6 +14,7 @@ export default function AdminAttendancesPage() {
   // Filtros
   const [month, setMonth] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
   const [employeeId, setEmployeeId] = useState('');
+  const [sedeFilter, setSedeFilter] = useState('ALL'); // 'ALL', 'SEDE_SOCIAL', 'SEDE_ADMINISTRATIVA', 'OUT_OF_RANGE'
   const [employeesList, setEmployeesList] = useState<any[]>([]);
 
   // Observación Modal
@@ -136,18 +119,15 @@ export default function AdminAttendancesPage() {
         
         let estadoTxt = '';
         if (entrada || salida) {
-          const distE = entrada ? getDistanceInMeters(entrada.latitude, entrada.longitude, SEDE_LAT, SEDE_LNG) : null;
-          const distS = salida ? getDistanceInMeters(salida.latitude, salida.longitude, SEDE_LAT, SEDE_LNG) : null;
+          const eEval = entrada ? evaluateLocation(entrada.latitude, entrada.longitude) : null;
+          const sEval = salida ? evaluateLocation(salida.latitude, salida.longitude) : null;
           
-          const eOk = distE !== null ? (distE <= MAX_DISTANCE_METERS ? '✅ En rango' : '❌ Fuera de rango') : '';
-          const sOk = distS !== null ? (distS <= MAX_DISTANCE_METERS ? '✅ En rango' : '❌ Fuera de rango') : '';
-          
-          if (entrada && salida) {
-            estadoTxt = eOk === sOk ? eOk : `Ent.: ${eOk.replace('✅ ','').replace('❌ ','')} | Sal.: ${sOk.replace('✅ ','').replace('❌ ','')}`;
-          } else if (entrada) {
-            estadoTxt = eOk;
-          } else if (salida) {
-            estadoTxt = sOk;
+          if (eEval && sEval) {
+            estadoTxt = eEval.statusLabel === sEval.statusLabel ? eEval.statusLabel : `Ent.: ${eEval.shortLabel} | Sal.: ${sEval.shortLabel}`;
+          } else if (eEval) {
+            estadoTxt = eEval.statusLabel;
+          } else if (sEval) {
+            estadoTxt = sEval.statusLabel;
           }
         }
 
@@ -202,7 +182,7 @@ export default function AdminAttendancesPage() {
       });
 
       worksheet.columns = [
-        { width: 25 }, { width: 15 }, { width: 35 }, { width: 15 }, { width: 20 }, { width: 30 }, { width: 40 }
+        { width: 25 }, { width: 15 }, { width: 35 }, { width: 15 }, { width: 25 }, { width: 30 }, { width: 40 }
       ];
 
       attendances.forEach(record => {
@@ -210,9 +190,8 @@ export default function AdminAttendancesPage() {
           weekday: 'long', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' 
         }).format(new Date(record.timestamp));
 
-        const dist = getDistanceInMeters(record.latitude, record.longitude, SEDE_LAT, SEDE_LNG);
-        const enRango = dist <= MAX_DISTANCE_METERS;
-        const statusUbi = enRango ? '✅ En Rango' : `❌ Fuera (${dist}m)`;
+        const evalLoc = evaluateLocation(record.latitude, record.longitude);
+        const statusUbi = evalLoc.statusLabel;
 
         const row = worksheet.addRow([
           formattedDate, record.employee.ci, `${record.employee.firstName} ${record.employee.lastName}`,
@@ -220,7 +199,7 @@ export default function AdminAttendancesPage() {
         ]);
         
         row.getCell(4).font = { color: { argb: record.type === 'ENTRADA' ? 'FF008000' : 'FFFF0000' }, bold: true };
-        row.getCell(5).font = { color: { argb: enRango ? 'FF008000' : 'FFFF0000' }, bold: true };
+        row.getCell(5).font = { color: { argb: evalLoc.inRange ? 'FF008000' : 'FFFF0000' }, bold: true };
         
         // Aplicar bordes y fondo blanco a todas las celdas de la fila
         for(let i = 1; i <= 7; i++) {
@@ -310,6 +289,19 @@ export default function AdminAttendancesPage() {
               ))}
             </select>
           </div>
+          <div className="flex-1 max-w-xs">
+            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Filtrar por Sede</label>
+            <select
+              value={sedeFilter}
+              onChange={(e) => setSedeFilter(e.target.value)}
+              className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:ring-2 focus:ring-red-800 transition-shadow font-medium shadow-sm"
+            >
+              <option value="ALL">Todas las sedes</option>
+              <option value="SEDE_SOCIAL">🌳 Sede Social</option>
+              <option value="SEDE_ADMINISTRATIVA">🏢 Sede Administrativa</option>
+              <option value="OUT_OF_RANGE">⚠️ Fuera de rango</option>
+            </select>
+          </div>
         </div>
 
         <button 
@@ -321,25 +313,43 @@ export default function AdminAttendancesPage() {
         </button>
       </div>
 
-      {/* KPIs Innovadores */}
+      {/* KPIs Innovadores Multi-Sede */}
       {!loading && attendances.length > 0 && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex flex-col justify-center items-center">
-            <span className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-1">Total Marcaciones</span>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          <div className="bg-white p-3.5 rounded-xl border border-gray-100 shadow-sm flex flex-col justify-center items-center">
+            <span className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-1">Total</span>
             <span className="text-2xl font-black text-gray-800">{attendances.length}</span>
           </div>
-          <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex flex-col justify-center items-center">
+          <div className="bg-white p-3.5 rounded-xl border border-gray-100 shadow-sm flex flex-col justify-center items-center">
             <span className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-1">Entradas</span>
             <span className="text-2xl font-black text-green-600">{attendances.filter(a => a.type === 'ENTRADA').length}</span>
           </div>
-          <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex flex-col justify-center items-center">
+          <div className="bg-white p-3.5 rounded-xl border border-gray-100 shadow-sm flex flex-col justify-center items-center">
             <span className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-1">Salidas</span>
             <span className="text-2xl font-black text-red-600">{attendances.filter(a => a.type === 'SALIDA').length}</span>
           </div>
-          <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex flex-col justify-center items-center">
-            <span className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-1">Fuera de Rango</span>
+          <div className="bg-white p-3.5 rounded-xl border border-gray-100 shadow-sm flex flex-col justify-center items-center">
+            <span className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-1">🌳 Sede Social</span>
+            <span className="text-2xl font-black text-emerald-600">
+              {attendances.filter(a => {
+                const e = evaluateLocation(a.latitude, a.longitude);
+                return e.inRange && e.sede.id === 'SEDE_SOCIAL';
+              }).length}
+            </span>
+          </div>
+          <div className="bg-white p-3.5 rounded-xl border border-gray-100 shadow-sm flex flex-col justify-center items-center">
+            <span className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-1">🏢 Sede Adm.</span>
+            <span className="text-2xl font-black text-blue-600">
+              {attendances.filter(a => {
+                const e = evaluateLocation(a.latitude, a.longitude);
+                return e.inRange && e.sede.id === 'SEDE_ADMINISTRATIVA';
+              }).length}
+            </span>
+          </div>
+          <div className="bg-white p-3.5 rounded-xl border border-gray-100 shadow-sm flex flex-col justify-center items-center">
+            <span className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-1">Fuera Rango</span>
             <span className="text-2xl font-black text-orange-500">
-              {attendances.filter(a => getDistanceInMeters(a.latitude, a.longitude, SEDE_LAT, SEDE_LNG) > MAX_DISTANCE_METERS).length}
+              {attendances.filter(a => !evaluateLocation(a.latitude, a.longitude).inRange).length}
             </span>
           </div>
         </div>
@@ -362,12 +372,22 @@ export default function AdminAttendancesPage() {
             <tbody className="bg-white divide-y divide-gray-100 text-black">
               {loading ? (
                 <tr><td colSpan={6} className="px-6 py-12 text-center text-gray-500 font-medium"><Loader2 className="w-8 h-8 animate-spin mx-auto mb-2 text-red-800" /> Cargando registros...</td></tr>
-              ) : attendances.length === 0 ? (
-                <tr><td colSpan={6} className="px-6 py-12 text-center text-gray-500 font-medium">No hay registros para este mes.</td></tr>
-              ) : (
-                attendances.map((record) => {
-                  const dist = getDistanceInMeters(record.latitude, record.longitude, SEDE_LAT, SEDE_LNG);
-                  const enRango = dist <= MAX_DISTANCE_METERS;
+              ) : (() => {
+                const filtered = attendances.filter(record => {
+                  if (sedeFilter === 'ALL') return true;
+                  const evalLoc = evaluateLocation(record.latitude, record.longitude);
+                  if (sedeFilter === 'OUT_OF_RANGE') return !evalLoc.inRange;
+                  return evalLoc.inRange && evalLoc.sede.id === sedeFilter;
+                });
+
+                if (filtered.length === 0) {
+                  return (
+                    <tr><td colSpan={6} className="px-6 py-12 text-center text-gray-500 font-medium">No hay registros que coincidan con los filtros.</td></tr>
+                  );
+                }
+
+                return filtered.map((record) => {
+                  const evalLoc = evaluateLocation(record.latitude, record.longitude);
                   return (
                   <tr 
                     key={record.id} 
@@ -390,18 +410,26 @@ export default function AdminAttendancesPage() {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm flex flex-col gap-1.5">
-                      {enRango ? (
-                        <span className="inline-flex items-center gap-1 text-xs font-bold text-green-700 bg-green-50 border border-green-100 px-2.5 py-1 rounded-md w-max">
-                          ✅ En rango
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 text-xs font-bold text-orange-700 bg-orange-50 border border-orange-100 px-2.5 py-1 rounded-md w-max">
-                          ❌ Fuera ({dist}m)
-                        </span>
-                      )}
-                      <span className="flex items-center gap-1 text-blue-500 hover:text-blue-700 transition-colors font-medium text-xs mt-0.5 group-hover:underline">
-                        <MapPin className="w-3 h-3" /> Ver mapa
+                      <span className={`inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-md w-max border ${
+                        evalLoc.inRange 
+                          ? (evalLoc.sede.id === 'SEDE_ADMINISTRATIVA' 
+                              ? 'bg-blue-50 text-blue-700 border-blue-200' 
+                              : 'bg-green-50 text-green-700 border-green-200')
+                          : 'bg-orange-50 text-orange-700 border-orange-200'
+                      }`}>
+                        {evalLoc.statusLabel}
                       </span>
+                      {record.latitude && record.longitude && (
+                        <a 
+                          href={`https://www.google.com/maps?q=${record.latitude},${record.longitude}`} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="flex items-center gap-1 text-blue-500 hover:text-blue-700 transition-colors font-medium text-xs mt-0.5 hover:underline"
+                        >
+                          <MapPin className="w-3 h-3" /> Ver en mapa
+                        </a>
+                      )}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-500 max-w-[200px] truncate">
                       {record.observation ? (
@@ -418,8 +446,9 @@ export default function AdminAttendancesPage() {
                       ) : '-'}
                     </td>
                   </tr>
-                )})
-              )}
+                );
+                });
+              })()}
             </tbody>
           </table>
         </div>
@@ -445,9 +474,23 @@ export default function AdminAttendancesPage() {
               >
                 <MapPin className="w-5 h-5" /> Abrir en Google Maps
               </a>
-              <p className="text-xs text-gray-500 mt-2 text-center">
-                Lat: {selectedRecord.latitude.toFixed(5)} <br/> Lng: {selectedRecord.longitude.toFixed(5)}
-              </p>
+              {(() => {
+                const evalLoc = evaluateLocation(selectedRecord.latitude, selectedRecord.longitude);
+                return (
+                  <div className="mt-3 text-center">
+                    <span className={`inline-block px-2.5 py-1 text-xs font-bold rounded-lg border ${
+                      evalLoc.inRange 
+                        ? (evalLoc.sede.id === 'SEDE_ADMINISTRATIVA' ? 'bg-blue-50 text-blue-800 border-blue-200' : 'bg-green-50 text-green-800 border-green-200')
+                        : 'bg-orange-50 text-orange-800 border-orange-200'
+                    }`}>
+                      {evalLoc.statusLabel}
+                    </span>
+                    <p className="text-xs text-gray-500 mt-1.5">
+                      Lat: {selectedRecord.latitude ? selectedRecord.latitude.toFixed(5) : 'N/A'} | Lng: {selectedRecord.longitude ? selectedRecord.longitude.toFixed(5) : 'N/A'}
+                    </p>
+                  </div>
+                );
+              })()}
             </div>
 
             {/* Derecha: Datos y Observación */}
