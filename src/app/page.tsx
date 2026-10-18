@@ -90,7 +90,15 @@ export default function Home() {
       }
       navigator.geolocation.getCurrentPosition(
         (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-        (err) => reject('No se pudo obtener la ubicación. ' + err.message)
+        () => {
+          // Fallback en caso de que el GPS de alta precisión tarde demasiado bajo techo
+          navigator.geolocation.getCurrentPosition(
+            (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+            (err) => reject('No se pudo obtener la ubicación. ' + err.message),
+            { enableHighAccuracy: false, timeout: 10000, maximumAge: 0 }
+          );
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
       );
     });
   };

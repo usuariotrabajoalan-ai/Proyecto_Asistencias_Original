@@ -17,11 +17,11 @@ export const metadata: Metadata = {
   description: "Plataforma de control de marcaciones para funcionarios",
   manifest: "/manifest.json",
   icons: {
-    icon: "/logo.jpg",
-    apple: "/logo.jpg",
+    icon: "/icon-192.png",
+    apple: "/icon-192.png",
   },
   appleWebApp: {
-    title: "fichero sede social",
+    title: "Asistencia AFEMEC",
     statusBarStyle: "default",
     capable: true,
   },
@@ -29,6 +29,7 @@ export const metadata: Metadata = {
 
 import IntroSplash from "@/components/IntroSplash";
 import PwaRegister from "@/components/PwaRegister";
+import InstallPrompt from "@/components/InstallPrompt";
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
@@ -37,9 +38,17 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();window.__pwaPrompt=e;});`,
+          }}
+        />
+      </head>
       <body className="min-h-full flex flex-col">
         <PwaRegister />
         <IntroSplash />
+        <InstallPrompt />
         {children}
       </body>
     </html>
