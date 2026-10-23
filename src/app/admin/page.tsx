@@ -1,7 +1,18 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Download, MessageSquare, MapPin, Search, Trash2, Loader2 } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { 
+  Download, 
+  MessageSquare, 
+  MapPin, 
+  Search, 
+  Trash2, 
+  Loader2, 
+  User, 
+  X, 
+  Check, 
+  ChevronDown 
+} from 'lucide-react';
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
 
@@ -17,6 +28,11 @@ export default function AdminAttendancesPage() {
   const [sedeFilter, setSedeFilter] = useState('ALL'); // 'ALL', 'SEDE_SOCIAL', 'SEDE_ADMINISTRATIVA', 'OUT_OF_RANGE'
   const [employeesList, setEmployeesList] = useState<any[]>([]);
 
+  // Buscador de Funcionario
+  const [searchEmpTerm, setSearchEmpTerm] = useState('');
+  const [isEmpDropdownOpen, setIsEmpDropdownOpen] = useState(false);
+  const empDropdownRef = useRef<HTMLDivElement>(null);
+
   // Observación Modal
   const [selectedRecord, setSelectedRecord] = useState<any>(null);
   const [observationText, setObservationText] = useState('');
@@ -28,6 +44,17 @@ export default function AdminAttendancesPage() {
   useEffect(() => {
     fetchAttendances();
   }, [month, employeeId]);
+
+  // Cerrar dropdown al hacer clic fuera
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (empDropdownRef.current && !empDropdownRef.current.contains(event.target as Node)) {
+        setIsEmpDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const fetchEmployees = async () => {
     try {
@@ -52,6 +79,30 @@ export default function AdminAttendancesPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const normalizeText = (text: string) =>
+    (text || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+
+  const filteredEmployeesList = employeesList.filter((emp) => {
+    if (!searchEmpTerm.trim()) return true;
+    const q = normalizeText(searchEmpTerm);
+    const fullName = normalizeText(`${emp.firstName} ${emp.lastName}`);
+    const ci = normalizeText(emp.ci || '');
+    return fullName.includes(q) || ci.includes(q);
+  });
+
+  const selectedEmpObj = employeesList.find((e) => e.id === employeeId);
+
+  const handleSelectEmployee = (emp: any | null) => {
+    if (!emp) {
+      setEmployeeId('');
+      setSearchEmpTerm('');
+    } else {
+      setEmployeeId(emp.id);
+      setSearchEmpTerm('');
+    }
+    setIsEmpDropdownOpen(false);
   };
 
   const handleExportExcel = async () => {
@@ -267,6 +318,7 @@ export default function AdminAttendancesPage() {
           
           <div className="hidden md:block w-px bg-gray-200 mx-2"></div>
           
+          {/* Filtro por Mes */}
           <div className="flex-1 max-w-xs">
             <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Filtrar por Mes</label>
             <input
@@ -276,19 +328,113 @@ export default function AdminAttendancesPage() {
               className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:ring-2 focus:ring-red-800 transition-shadow font-medium shadow-sm"
             />
           </div>
-          <div className="flex-1 max-w-sm">
-            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Filtrar por Empleado</label>
-            <select
-              value={employeeId}
-              onChange={(e) => setEmployeeId(e.target.value)}
-              className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:ring-2 focus:ring-red-800 transition-shadow font-medium shadow-sm"
-            >
-              <option value="">Todos los funcionarios</option>
-              {employeesList.map(emp => (
-                <option key={emp.id} value={emp.id}>{emp.ci} - {emp.firstName} {emp.lastName}</option>
-              ))}
-            </select>
+
+          {/* Buscador inteligente de Funcionario (Sin recomendaciones ni historial guardado) */}
+          <div className="flex-1 max-w-sm relative" ref={empDropdownRef}>
+            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+              Filtrar por Empleado
+            </label>
+            
+            {selectedEmpObj ? (
+              <div className="flex items-center justify-between w-full px-3.5 py-2 bg-red-50 border border-red-200 rounded-xl shadow-sm text-sm">
+                <div className="flex items-center gap-2 overflow-hidden">
+                  <User className="w-4 h-4 text-red-800 shrink-0" />
+                  <span className="font-bold text-gray-900 truncate">
+                    {selectedEmpObj.firstName} {selectedEmpObj.lastName}
+                  </span>
+                  <span className="text-xs bg-white text-gray-600 px-1.5 py-0.5 rounded border border-red-100 font-mono shrink-0">
+                    CI: {selectedEmpObj.ci}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleSelectEmployee(null)}
+                  title="Quitar filtro y ver todos"
+                  className="p-1 text-gray-400 hover:text-red-700 hover:bg-red-100/60 rounded-full transition-colors ml-1 shrink-0"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <div className="relative">
+                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                <input
+                  type="search"
+                  name="funcionario_search_no_autofill_afemec"
+                  autoComplete="off"
+                  autoCorrect="off"
+                  autoCapitalize="off"
+                  spellCheck="false"
+                  data-lpignore="true"
+                  data-form-type="other"
+                  aria-autocomplete="none"
+                  value={searchEmpTerm}
+                  onChange={(e) => {
+                    setSearchEmpTerm(e.target.value);
+                    if (!isEmpDropdownOpen) setIsEmpDropdownOpen(true);
+                  }}
+                  onFocus={() => setIsEmpDropdownOpen(true)}
+                  placeholder="Buscar por nombre o CI..."
+                  className="w-full pl-9 pr-8 py-2 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-red-800 transition-shadow font-medium shadow-sm"
+                />
+                {searchEmpTerm && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchEmpTerm('')}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-0.5"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Dropdown flotante con opciones */}
+            {isEmpDropdownOpen && (
+              <div className="absolute z-50 left-0 right-0 mt-1 max-h-64 overflow-y-auto bg-white rounded-2xl shadow-2xl border border-gray-200 divide-y divide-gray-100 animate-in fade-in slide-in-from-top-1 duration-150">
+                <div 
+                  onClick={() => handleSelectEmployee(null)}
+                  className={`px-4 py-2.5 text-xs font-semibold flex items-center justify-between cursor-pointer transition-colors ${
+                    !employeeId ? 'bg-red-50 text-red-900' : 'text-gray-600 hover:bg-gray-50'
+                  }`}
+                >
+                  <span>Todos los funcionarios (Reporte General)</span>
+                  {!employeeId && <Check className="w-4 h-4 text-red-800" />}
+                </div>
+
+                {filteredEmployeesList.length > 0 ? (
+                  filteredEmployeesList.map((emp) => {
+                    const isSelected = emp.id === employeeId;
+                    return (
+                      <div
+                        key={emp.id}
+                        onClick={() => handleSelectEmployee(emp)}
+                        className={`px-4 py-2.5 text-sm flex items-center justify-between cursor-pointer transition-colors ${
+                          isSelected ? 'bg-red-50 text-red-900 font-bold' : 'hover:bg-red-50/50 text-gray-800'
+                        }`}
+                      >
+                        <div className="flex flex-col">
+                          <span className="font-semibold text-gray-900 leading-tight">
+                            {emp.firstName} {emp.lastName}
+                          </span>
+                          <span className="text-xs text-gray-500 font-mono mt-0.5">
+                            CI: {emp.ci}
+                          </span>
+                        </div>
+                        {isSelected && <Check className="w-4 h-4 text-red-800 shrink-0" />}
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="px-4 py-4 text-xs text-gray-500 text-center">
+                    No se encontró ningún funcionario con &quot;{searchEmpTerm}&quot;
+                  </div>
+                )}
+              </div>
+            )}
           </div>
+
+          {/* Filtro por Sede */}
           <div className="flex-1 max-w-xs">
             <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Filtrar por Sede</label>
             <select
@@ -386,7 +532,7 @@ export default function AdminAttendancesPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       <span className={`px-3 py-1 inline-flex text-xs leading-5 font-bold rounded-lg ${
-                        record.type === 'ENTRADA' ? 'bg-green-100 text-green-800 border border-green-200' : 'bg-red-100 text-red-800 border border-red-200'
+                        record.type === 'ENTRADA' ? 'bg-green-100 text-green-800 border border-green-200' : 'bg-red-100 text-red-800 border border-green-200'
                       }`}>
                         {record.type}
                       </span>
@@ -415,7 +561,7 @@ export default function AdminAttendancesPage() {
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-500 max-w-[200px] truncate">
                       {record.observation ? (
-                        <span className="italic text-gray-700 bg-gray-50 px-2 py-1 rounded border border-gray-100">"{record.observation}"</span>
+                        <span className="italic text-gray-700 bg-gray-50 px-2 py-1 rounded border border-gray-100">&quot;{record.observation}&quot;</span>
                       ) : (
                         <span className="text-gray-300">Sin observación</span>
                       )}

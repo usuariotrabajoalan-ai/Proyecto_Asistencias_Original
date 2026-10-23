@@ -130,7 +130,7 @@ export default function EmployeesPage() {
           <Search className="h-5 w-5 text-gray-400" />
         </div>
         <input
-          type="text"
+          type="search" name="search_directory_no_autofill" autoComplete="off" autoCorrect="off" autoCapitalize="off" spellCheck="false" data-lpignore="true" data-form-type="other"
           placeholder="Buscar por cédula, nombre o apellido..."
           className="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-red-800 focus:border-red-800 sm:text-sm text-black shadow-sm"
           value={searchTerm}
