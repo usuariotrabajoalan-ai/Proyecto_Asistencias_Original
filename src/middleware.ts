@@ -9,7 +9,7 @@ export async function middleware(request: NextRequest) {
   // 1. Proteger APIs administrativas de asistencias
   const isAttendanceAdminApi = 
     (pathname === '/api/attendance' && method === 'GET') ||
-    (pathname.startsWith('/api/attendance/') && (method === 'PUT' || method === 'DELETE' || pathname.endsWith('/photo')));
+    (pathname.startsWith('/api/attendance/') && (method === 'PUT' || method === 'DELETE'));
 
   // 2. Proteger APIs administrativas de empleados
   const isEmployeeAdminApi =

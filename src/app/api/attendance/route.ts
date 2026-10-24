@@ -7,7 +7,6 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const month = searchParams.get('month'); // Formato: YYYY-MM
     const employeeId = searchParams.get('employeeId');
-    const includeRawPhotos = searchParams.get('includePhotos') === 'true';
 
     let dateFilter = {};
     if (month) {
@@ -28,45 +27,15 @@ export async function GET(request: Request) {
       whereClause.employeeId = employeeId;
     }
 
-    if (includeRawPhotos) {
-      // Modo retrocompatible explícito si alguien requiere las fotos inline
-      const attendances = await prisma.attendanceRecord.findMany({
-        where: whereClause,
-        include: {
-          employee: true,
-        },
-        orderBy: {
-          timestamp: 'desc',
-        },
-      });
-      return NextResponse.json(attendances);
-    }
-
-    // Consulta ultra-optimizada para evitar superar el límite de payload de Vercel (4.5 MB).
-    // Omitimos photoBase64 de la transferencia y proveemos photoUrl bajo demanda.
-    const records = await prisma.attendanceRecord.findMany({
+    const attendances = await prisma.attendanceRecord.findMany({
       where: whereClause,
-      select: {
-        id: true,
-        employeeId: true,
-        type: true,
-        timestamp: true,
-        latitude: true,
-        longitude: true,
-        observation: true,
+      include: {
         employee: true,
       },
       orderBy: {
         timestamp: 'desc',
       },
     });
-
-    const attendances = records.map((r) => ({
-      ...r,
-      hasPhoto: true,
-      photoUrl: `/api/attendance/${r.id}/photo`,
-      photoBase64: null,
-    }));
 
     return NextResponse.json(attendances);
   } catch (error) {
