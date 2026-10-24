@@ -3,11 +3,12 @@ import { Users, Clock, Settings, LogOut } from 'lucide-react';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import AdminLoginForm from '@/components/AdminLoginForm';
+import { ADMIN_COOKIE_NAME, verifyAdminToken } from '@/lib/auth';
 
 async function logoutAction() {
   "use server";
   const cookieStore = await cookies();
-  cookieStore.delete('admin_session');
+  cookieStore.delete(ADMIN_COOKIE_NAME);
   redirect('/');
 }
 
@@ -17,9 +18,10 @@ export default async function AdminLayout({
   children: React.ReactNode;
 }) {
   const cookieStore = await cookies();
-  const session = cookieStore.get('admin_session');
+  const session = cookieStore.get(ADMIN_COOKIE_NAME);
+  const isValid = session ? await verifyAdminToken(session.value) : false;
   
-  if (!session || session.value !== 'authenticated') {
+  if (!isValid) {
     return <AdminLoginForm />;
   }
 
@@ -60,4 +62,3 @@ export default async function AdminLayout({
     </div>
   );
 }
-

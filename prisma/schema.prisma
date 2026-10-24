@@ -30,6 +30,10 @@ model AttendanceRecord {
   observation String?
   
   employee    Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([timestamp])
+  @@index([employeeId])
+  @@index([employeeId, timestamp])
 }
 
 model AsistenciaConfig {

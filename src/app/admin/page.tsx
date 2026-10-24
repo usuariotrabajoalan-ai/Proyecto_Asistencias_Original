@@ -567,9 +567,19 @@ export default function AdminAttendancesPage() {
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      {record.photoBase64 ? (
-                        <div className="relative w-12 h-12 rounded-xl overflow-hidden border-2 border-gray-100 group-hover:border-red-200 transition-colors shadow-sm">
-                          <img src={record.photoBase64} alt="Selfie" className="w-full h-full object-cover" />
+                      {record.photoBase64 || record.hasPhoto ? (
+                        <div className="relative w-12 h-12 rounded-xl overflow-hidden border-2 border-gray-100 group-hover:border-red-200 transition-colors shadow-sm bg-gray-100">
+                          <img 
+                            src={record.photoBase64 || `/api/attendance/${record.id}/photo`} 
+                            alt="Selfie" 
+                            className="w-full h-full object-cover" 
+                            loading="lazy"
+                            onError={(e) => {
+                              const target = e.currentTarget;
+                              target.style.display = 'none';
+                              if (target.parentElement) target.parentElement.innerHTML = '<span class="text-xs text-gray-400 flex items-center justify-center w-full h-full">-</span>';
+                            }}
+                          />
                         </div>
                       ) : '-'}
                     </td>
@@ -588,8 +598,22 @@ export default function AdminAttendancesPage() {
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl flex flex-col md:flex-row overflow-hidden">
             {/* Izquierda: Foto y Mapa */}
             <div className="bg-gray-100 p-6 flex flex-col items-center justify-center border-r md:w-1/2">
-              {selectedRecord.photoBase64 ? (
-                <img src={selectedRecord.photoBase64} alt="Selfie Completa" className="w-48 h-48 rounded-lg object-cover shadow-md mb-4 border-2 border-white" />
+              {selectedRecord.photoBase64 || selectedRecord.hasPhoto ? (
+                <img 
+                  src={selectedRecord.photoBase64 || `/api/attendance/${selectedRecord.id}/photo`} 
+                  alt="Selfie Completa" 
+                  className="w-48 h-48 rounded-lg object-cover shadow-md mb-4 border-2 border-white bg-gray-200" 
+                  onError={(e) => {
+                    const target = e.currentTarget;
+                    target.style.display = 'none';
+                    if (target.parentElement) {
+                      const placeholder = document.createElement('div');
+                      placeholder.className = 'w-48 h-48 bg-gray-200 rounded-lg flex items-center justify-center mb-4';
+                      placeholder.innerHTML = '<span class="text-gray-500">Sin foto</span>';
+                      target.parentElement.insertBefore(placeholder, target);
+                    }
+                  }}
+                />
               ) : (
                 <div className="w-48 h-48 bg-gray-200 rounded-lg flex items-center justify-center mb-4">
                   <span className="text-gray-500">Sin foto</span>
