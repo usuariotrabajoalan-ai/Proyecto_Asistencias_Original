@@ -16,7 +16,10 @@ export async function middleware(request: NextRequest) {
     (pathname === '/api/employees' && (method === 'GET' || method === 'POST')) ||
     (pathname.startsWith('/api/employees/') && (method === 'PUT' || method === 'DELETE'));
 
-  if (isAttendanceAdminApi || isEmployeeAdminApi) {
+  // 3. Proteger rutas internas de administración (backups, reportes protegidos)
+  const isAdminInternalApi = pathname.startsWith('/api/admin/');
+
+  if (isAttendanceAdminApi || isEmployeeAdminApi || isAdminInternalApi) {
     const sessionToken = request.cookies.get(ADMIN_COOKIE_NAME)?.value;
     const isValid = await verifyAdminToken(sessionToken);
 
@@ -35,5 +38,6 @@ export const config = {
   matcher: [
     '/api/attendance/:path*',
     '/api/employees/:path*',
+    '/api/admin/:path*',
   ],
 };
