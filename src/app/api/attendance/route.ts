@@ -10,14 +10,18 @@ export async function GET(request: Request) {
 
     let dateFilter = {};
     if (month) {
-      const startDate = new Date(`${month}-01T00:00:00.000Z`);
-      const endDate = new Date(startDate);
-      endDate.setMonth(endDate.getMonth() + 1);
+      const baseStart = new Date(`${month}-01T00:00:00.000Z`);
+      const baseEnd = new Date(baseStart);
+      baseEnd.setMonth(baseEnd.getMonth() + 1);
+
+      // Margen de 36 horas antes y después para capturar turnos nocturnos/guardias que cruzan fin de mes
+      const marginStart = new Date(baseStart.getTime() - 36 * 60 * 60 * 1000);
+      const marginEnd = new Date(baseEnd.getTime() + 36 * 60 * 60 * 1000);
 
       dateFilter = {
         timestamp: {
-          gte: startDate,
-          lt: endDate,
+          gte: marginStart,
+          lt: marginEnd,
         },
       };
     }
