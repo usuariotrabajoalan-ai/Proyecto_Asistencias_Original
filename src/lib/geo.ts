@@ -22,7 +22,7 @@ export const SEDES: SedeConfig[] = [
     shortName: 'Sede Administrativa',
     lat: -25.286900,
     lng: -57.640900,
-    radiusMeters: 15, // 15m de cobertura máxima
+    radiusMeters: 30, // 30m de cobertura ampliada (máximo solicitado)
   }
 ];
 

@@ -349,7 +349,7 @@ export default function AdminAttendancesPage() {
 
     if (isIndividual && selectedEmp) {
       // --- REPORTE INDIVIDUAL PAREADO ---
-      worksheet.mergeCells('A1:G1');
+      worksheet.mergeCells('A1:H1');
       const titleCell = worksheet.getCell('A1');
       titleCell.value = `PLANILLA DE ASISTENCIA: ${selectedEmp.firstName.toUpperCase()} ${selectedEmp.lastName.toUpperCase()} - PERÍODO: ${month} (${sedeLabel.toUpperCase()})`;
       titleCell.font = { name: 'Arial', size: 13, bold: true, color: { argb: 'FFFFFFFF' } };
@@ -360,13 +360,14 @@ export default function AdminAttendancesPage() {
       worksheet.addRow([]);
 
       const headerRow = worksheet.addRow([
-        'Día y Fecha',
+        'Día y Fecha Inicio',
         'Hora Entrada',
         'Sede Entrada',
+        'Fecha de Salida',
         'Hora Salida',
         'Sede Salida',
         'Horas Trabajadas',
-        'Observación / Estado'
+        'Detalle del Turno / Observación'
       ]);
       headerRow.eachCell((cell) => {
         cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
@@ -376,13 +377,14 @@ export default function AdminAttendancesPage() {
       });
 
       worksheet.columns = [
-        { width: 26 }, // Día
-        { width: 14 }, // Entrada
+        { width: 28 }, // Día Entrada
+        { width: 14 }, // Hora Entrada
         { width: 22 }, // Sede In
-        { width: 16 }, // Salida
+        { width: 34 }, // Fecha Salida (Con descripción completa y clara)
+        { width: 14 }, // Hora Salida
         { width: 22 }, // Sede Out
         { width: 18 }, // Horas
-        { width: 35 }, // Obs
+        { width: 42 }, // Detalle
       ];
 
       // Exportar en orden cronológico (del 1 al último día)
@@ -393,12 +395,27 @@ export default function AdminAttendancesPage() {
           ? new Intl.DateTimeFormat('es-ES', { hour: '2-digit', minute: '2-digit' }).format(new Date(shift.entrada.timestamp))
           : '---';
 
-        let outStr = '---';
+        let fechaSalidaStr = '---';
+        let horaSalidaStr = '---';
+
         if (shift.salida) {
-          const tOut = new Intl.DateTimeFormat('es-ES', { hour: '2-digit', minute: '2-digit' }).format(new Date(shift.salida.timestamp));
-          outStr = shift.isOvernight ? `${tOut} (+1 día)` : tOut;
+          horaSalidaStr = new Intl.DateTimeFormat('es-ES', { hour: '2-digit', minute: '2-digit' }).format(new Date(shift.salida.timestamp));
+          const dOut = new Date(shift.salida.timestamp);
+          const dateOutFull = new Intl.DateTimeFormat('es-ES', { 
+            weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' 
+          }).format(dOut);
+
+          if (shift.isOvernight) {
+            fechaSalidaStr = `${dateOutFull} (Día Siguiente)`;
+          } else {
+            fechaSalidaStr = `${dateOutFull} (Mismo Día)`;
+          }
         } else if (shift.status === 'EN_CURSO') {
-          outStr = 'En curso';
+          fechaSalidaStr = 'En Curso (Pendiente de salida)';
+          horaSalidaStr = '---';
+        } else if (shift.status === 'SIN_SALIDA') {
+          fechaSalidaStr = 'Sin Marcación de Salida';
+          horaSalidaStr = '---';
         }
 
         const evalIn = shift.entrada ? evaluateLocation(shift.entrada.latitude, shift.entrada.longitude) : null;
@@ -407,25 +424,38 @@ export default function AdminAttendancesPage() {
         const sedeInStr = evalIn ? evalIn.shortLabel : '---';
         const sedeOutStr = evalOut ? evalOut.shortLabel : '---';
 
-        let obs = [shift.entrada?.observation, shift.salida?.observation].filter(Boolean).join(' | ');
-        if (!obs) {
-          if (shift.isOvernight) obs = 'Turno nocturno (Guardia)';
-          else if (shift.status === 'EN_CURSO') obs = 'Turno en curso';
-          else if (shift.status === 'SIN_SALIDA') obs = 'Sin marcación de salida';
-          else if (shift.status === 'SIN_ENTRADA') obs = 'Sin marcación de entrada previa';
+        let detalleTurno = '';
+        if (shift.isGuard24h) {
+          detalleTurno = 'Guardia 24 Horas (Cruza al día siguiente)';
+        } else if (shift.isOvernight) {
+          const dInName = shift.dayOfWeek;
+          const dOutName = shift.salida ? new Intl.DateTimeFormat('es-ES', { weekday: 'long' }).format(new Date(shift.salida.timestamp)) : '';
+          detalleTurno = `Guardia Nocturna (Inició ${dInName} y salió ${dOutName} por la mañana)`;
+        } else if (shift.status === 'EN_CURSO') {
+          detalleTurno = 'Turno en curso activo';
+        } else if (shift.status === 'SIN_SALIDA') {
+          detalleTurno = 'Sin marcación de salida';
+        } else if (shift.status === 'SIN_ENTRADA') {
+          detalleTurno = 'Sin marcación de entrada previa';
+        } else {
+          detalleTurno = 'Jornada diurna estándar';
         }
+
+        const userObs = [shift.entrada?.observation, shift.salida?.observation].filter(Boolean).join(' | ');
+        const obsFinal = userObs ? `${detalleTurno} | Nota: ${userObs}` : detalleTurno;
 
         const row = worksheet.addRow([
           shift.dateLabel,
           inStr,
           sedeInStr,
-          outStr,
+          fechaSalidaStr,
+          horaSalidaStr,
           sedeOutStr,
           shift.durationLabel !== '--' ? shift.durationLabel : '---',
-          obs
+          obsFinal
         ]);
 
-        for (let i = 1; i <= 7; i++) {
+        for (let i = 1; i <= 8; i++) {
           const cell = row.getCell(i);
           cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
           cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
@@ -434,9 +464,10 @@ export default function AdminAttendancesPage() {
 
         if (shift.isOvernight) {
           row.getCell(4).font = { bold: true, color: { argb: 'FF1D4ED8' } };
+          row.getCell(5).font = { bold: true, color: { argb: 'FF1D4ED8' } };
         }
         if (shift.durationLabel !== '--') {
-          row.getCell(6).font = { bold: true };
+          row.getCell(7).font = { bold: true };
         }
       });
 
@@ -449,6 +480,7 @@ export default function AdminAttendancesPage() {
         '',
         'HORAS ACUMULADAS:',
         shiftMetrics.totalHoursStr,
+        '',
         `${shiftMetrics.totalShifts} jornadas (${shiftMetrics.completeCount} completas, ${shiftMetrics.overnightCount} nocturnas)`
       ]);
       totalRow.eachCell((cell) => {
@@ -459,8 +491,8 @@ export default function AdminAttendancesPage() {
       worksheet.addRow([]);
       worksheet.addRow([]);
       worksheet.addRow([]);
-      const signRow1 = worksheet.addRow(['', '', '', '', '____________________________________', '']);
-      const signRow2 = worksheet.addRow(['', '', '', '', 'Firma y Sello de Administración', '']);
+      const signRow1 = worksheet.addRow(['', '', '', '', '____________________________________', '', '']);
+      const signRow2 = worksheet.addRow(['', '', '', '', 'Firma y Sello de Administración', '', '']);
       worksheet.mergeCells(`E${signRow1.number}:F${signRow1.number}`);
       worksheet.mergeCells(`E${signRow2.number}:F${signRow2.number}`);
       signRow1.getCell(5).alignment = { horizontal: 'center' };
@@ -469,7 +501,7 @@ export default function AdminAttendancesPage() {
 
     } else {
       // --- REPORTE GENERAL CON JORNADAS PAREADAS ---
-      worksheet.mergeCells('A1:H1');
+      worksheet.mergeCells('A1:I1');
       const titleCell = worksheet.getCell('A1');
       titleCell.value = `PLANILLA GENERAL DE JORNADAS Y ASISTENCIA - MES: ${month} (${sedeLabel.toUpperCase()})`;
       titleCell.font = { name: 'Arial', size: 13, bold: true, color: { argb: 'FFFFFFFF' } };
@@ -480,14 +512,15 @@ export default function AdminAttendancesPage() {
       worksheet.addRow([]);
 
       const headerRow = worksheet.addRow([
-        'Fecha',
+        'Fecha Inicio',
         'CI',
         'Funcionario',
         'Hora Entrada',
+        'Fecha de Salida',
         'Hora Salida',
+        'Sede Institucional',
         'Horas Trabajadas',
-        'Tipo Turno / Estado',
-        'Observaciones'
+        'Detalle del Turno / Observaciones'
       ]);
       headerRow.eachCell((cell) => {
         cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
@@ -497,14 +530,15 @@ export default function AdminAttendancesPage() {
       });
 
       worksheet.columns = [
-        { width: 22 }, // Fecha
+        { width: 22 }, // Fecha Inicio
         { width: 14 }, // CI
         { width: 32 }, // Nombre
-        { width: 15 }, // Entrada
-        { width: 18 }, // Salida
+        { width: 15 }, // Hora Entrada
+        { width: 30 }, // Fecha Salida
+        { width: 15 }, // Hora Salida
+        { width: 22 }, // Sede
         { width: 18 }, // Horas
-        { width: 24 }, // Tipo
-        { width: 35 }, // Obs
+        { width: 42 }, // Detalle
       ];
 
       workdayShifts.forEach((shift) => {
@@ -512,39 +546,68 @@ export default function AdminAttendancesPage() {
           ? new Intl.DateTimeFormat('es-ES', { hour: '2-digit', minute: '2-digit' }).format(new Date(shift.entrada.timestamp))
           : '---';
 
-        let outStr = '---';
+        let fechaSalidaStr = '---';
+        let horaSalidaStr = '---';
+
         if (shift.salida) {
-          const tOut = new Intl.DateTimeFormat('es-ES', { hour: '2-digit', minute: '2-digit' }).format(new Date(shift.salida.timestamp));
-          outStr = shift.isOvernight ? `${tOut} (+1 día)` : tOut;
+          horaSalidaStr = new Intl.DateTimeFormat('es-ES', { hour: '2-digit', minute: '2-digit' }).format(new Date(shift.salida.timestamp));
+          const dOut = new Date(shift.salida.timestamp);
+          const dateOutFull = new Intl.DateTimeFormat('es-ES', { 
+            weekday: 'short', day: '2-digit', month: 'short' 
+          }).format(dOut);
+
+          if (shift.isOvernight) {
+            fechaSalidaStr = `${dateOutFull} (Día Siguiente)`;
+          } else {
+            fechaSalidaStr = `${dateOutFull} (Mismo Día)`;
+          }
         } else if (shift.status === 'EN_CURSO') {
-          outStr = 'En curso';
+          fechaSalidaStr = 'En Curso (Pendiente)';
+          horaSalidaStr = '---';
+        } else if (shift.status === 'SIN_SALIDA') {
+          fechaSalidaStr = 'Sin Marcación de Salida';
+          horaSalidaStr = '---';
         }
 
+        const evalIn = shift.entrada ? evaluateLocation(shift.entrada.latitude, shift.entrada.longitude) : null;
+        const evalOut = shift.salida ? evaluateLocation(shift.salida.latitude, shift.salida.longitude) : null;
+        const sedeStr = evalIn ? evalIn.shortLabel : (evalOut ? evalOut.shortLabel : '---');
+
         let tipoTurno = 'Turno Diurno';
-        if (shift.isGuard24h) tipoTurno = 'Guardia 24h';
-        else if (shift.isOvernight) tipoTurno = 'Guardia Nocturna';
+        if (shift.isGuard24h) tipoTurno = 'Guardia 24 Horas';
+        else if (shift.isOvernight) tipoTurno = 'Guardia Nocturna (Salió al día siguiente)';
         else if (shift.status === 'EN_CURSO') tipoTurno = 'En Curso';
         else if (shift.status === 'SIN_SALIDA') tipoTurno = 'Sin Salida';
         else if (shift.status === 'SIN_ENTRADA') tipoTurno = 'Sin Entrada';
 
-        const obs = [shift.entrada?.observation, shift.salida?.observation].filter(Boolean).join(' | ');
+        const userObs = [shift.entrada?.observation, shift.salida?.observation].filter(Boolean).join(' | ');
+        const obsFinal = userObs ? `${tipoTurno} - Nota: ${userObs}` : tipoTurno;
 
         const row = worksheet.addRow([
           shift.dateLabel,
           shift.employee.ci,
           `${shift.employee.firstName} ${shift.employee.lastName}`,
           inStr,
-          outStr,
+          fechaSalidaStr,
+          horaSalidaStr,
+          sedeStr,
           shift.durationLabel !== '--' ? shift.durationLabel : '---',
-          tipoTurno,
-          obs
+          obsFinal
         ]);
 
-        for (let i = 1; i <= 8; i++) {
+        for (let i = 1; i <= 9; i++) {
           const cell = row.getCell(i);
           cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
           cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
           cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFFF' } };
+        }
+
+        if (shift.isOvernight) {
+          row.getCell(5).font = { bold: true, color: { argb: 'FF1D4ED8' } };
+          row.getCell(6).font = { bold: true, color: { argb: 'FF1D4ED8' } };
+        }
+        if (shift.durationLabel !== '--') {
+          row.getCell(8).font = { bold: true };
         }
       });
     }
@@ -915,7 +978,7 @@ export default function AdminAttendancesPage() {
                             <span>{shift.dayOfWeek}</span>
                             {shift.isOvernight && (
                               <span className="inline-flex items-center gap-1 bg-indigo-50 text-indigo-700 text-[10px] font-bold px-2 py-0.5 rounded-md border border-indigo-200">
-                                <Moon className="w-3 h-3" /> Turno Noche (+1 día)
+                                <Moon className="w-3 h-3" /> Guardia Nocturna (Cruza medianoche)
                               </span>
                             )}
                             {shift.isGuard24h && (
@@ -992,8 +1055,9 @@ export default function AdminAttendancesPage() {
                                     {formatHourMin(shift.salida.timestamp)}
                                   </span>
                                   {shift.isOvernight && (
-                                    <span className="text-[10px] font-bold bg-indigo-100 text-indigo-800 px-1 rounded">
-                                      +1 día
+                                    <span className="inline-flex items-center gap-1 text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 px-1.5 py-0.5 rounded capitalize">
+                                      <Moon className="w-2.5 h-2.5 text-indigo-600" />
+                                      {new Intl.DateTimeFormat('es-ES', { weekday: 'short', day: '2-digit', month: 'short' }).format(new Date(shift.salida.timestamp))} (Día sig.)
                                     </span>
                                   )}
                                 </div>
