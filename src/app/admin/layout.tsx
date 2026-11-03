@@ -56,7 +56,7 @@ export default async function AdminLayout({
           </form>
         </div>
       </aside>
-      <main className="flex-1 p-4 md:p-8 overflow-auto w-full">
+      <main className="flex-1 p-3 sm:p-5 md:p-6 overflow-y-auto overflow-x-hidden w-full min-w-0">
         {children}
       </main>
     </div>

@@ -31,6 +31,8 @@ export async function GET(request: Request) {
       whereClause.employeeId = employeeId;
     }
 
+    const includePhotos = searchParams.get('includePhotos') === 'true';
+
     const attendances = await prisma.attendanceRecord.findMany({
       where: whereClause,
       include: {
@@ -40,6 +42,21 @@ export async function GET(request: Request) {
         timestamp: 'desc',
       },
     });
+
+    if (!includePhotos) {
+      const lightweight = attendances.map((r) => ({
+        id: r.id,
+        employeeId: r.employeeId,
+        type: r.type,
+        timestamp: r.timestamp,
+        latitude: r.latitude,
+        longitude: r.longitude,
+        observation: r.observation,
+        hasPhoto: Boolean(r.photoBase64),
+        employee: r.employee,
+      }));
+      return NextResponse.json(lightweight);
+    }
 
     return NextResponse.json(attendances);
   } catch (error) {

@@ -218,12 +218,12 @@ export default function LivenessCamera({ onCapture }: LivenessCameraProps) {
     const canvas = canvasRef.current;
     const video = videoRef.current;
     
-    canvas.width = video.videoWidth || 640;
-    canvas.height = video.videoHeight || 480;
+    canvas.width = Math.min(video.videoWidth || 640, 640);
+    canvas.height = Math.min(video.videoHeight || 480, 480);
     const ctx = canvas.getContext('2d');
     if (ctx) {
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.75);
       onCapture(dataUrl);
     }
   };
@@ -231,13 +231,32 @@ export default function LivenessCamera({ onCapture }: LivenessCameraProps) {
   const handleFallbackFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        if (typeof reader.result === 'string') {
-          onCapture(reader.result);
+      const img = new Image();
+      const objectUrl = URL.createObjectURL(file);
+      img.onload = () => {
+        URL.revokeObjectURL(objectUrl);
+        const canvas = document.createElement('canvas');
+        const maxDim = 640;
+        let w = img.width;
+        let h = img.height;
+        if (w > maxDim || h > maxDim) {
+          if (w > h) {
+            h = Math.round((h * maxDim) / w);
+            w = maxDim;
+          } else {
+            w = Math.round((w * maxDim) / h);
+            h = maxDim;
+          }
+        }
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, w, h);
+          onCapture(canvas.toDataURL('image/jpeg', 0.75));
         }
       };
-      reader.readAsDataURL(file);
+      img.src = objectUrl;
     }
   };
 

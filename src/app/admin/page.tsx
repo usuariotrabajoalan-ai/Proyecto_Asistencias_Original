@@ -659,7 +659,7 @@ export default function AdminAttendancesPage() {
   };
 
   return (
-    <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
+    <div className="w-full space-y-5">
       
       {/* 1. Encabezado Principal y Acción de Exportar */}
       <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -935,13 +935,13 @@ export default function AdminAttendancesPage() {
             <table className="min-w-full divide-y divide-gray-100">
               <thead className="bg-gray-50/90 text-gray-500 text-[11px] font-black uppercase tracking-wider">
                 <tr>
-                  <th className="px-5 py-3.5 text-left">Día y Jornada</th>
-                  <th className="px-5 py-3.5 text-left">Funcionario</th>
-                  <th className="px-5 py-3.5 text-left">Entrada (Selfie + Hora)</th>
-                  <th className="px-5 py-3.5 text-left">Salida (Selfie + Hora)</th>
-                  <th className="px-5 py-3.5 text-center">Horas Cumplidas</th>
-                  <th className="px-5 py-3.5 text-left">Estado / Observación</th>
-                  <th className="px-4 py-3.5 text-center">Detalles</th>
+                  <th className="px-3.5 py-3 text-left">Día y Jornada</th>
+                  <th className="px-3.5 py-3 text-left">Funcionario</th>
+                  <th className="px-3.5 py-3 text-left">Entrada</th>
+                  <th className="px-3.5 py-3 text-left">Salida</th>
+                  <th className="px-3.5 py-3 text-center">Horas</th>
+                  <th className="px-3 py-3 text-left">Estado</th>
+                  <th className="px-2.5 py-3 text-center">Detalle</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-100 text-gray-800 text-sm">
@@ -970,56 +970,61 @@ export default function AdminAttendancesPage() {
                         className="hover:bg-red-50/40 transition-colors group"
                       >
                         {/* 1. Día y Jornada */}
-                        <td className="px-5 py-4 whitespace-nowrap">
-                          <div className="font-bold text-gray-900 capitalize flex items-center gap-1.5">
-                            <span>{shift.dateLabel}</span>
+                        <td className="px-3.5 py-3">
+                          <div className="font-bold text-gray-900 text-xs sm:text-sm capitalize">
+                            {shift.dateLabel}
                           </div>
-                          <div className="text-xs text-gray-400 font-medium capitalize mt-0.5 flex items-center gap-1">
+                          <div className="text-[11px] text-gray-500 font-medium capitalize flex flex-wrap items-center gap-1 mt-0.5">
                             <span>{shift.dayOfWeek}</span>
                             {shift.isOvernight && (
-                              <span className="inline-flex items-center gap-1 bg-indigo-50 text-indigo-700 text-[10px] font-bold px-2 py-0.5 rounded-md border border-indigo-200">
-                                <Moon className="w-3 h-3" /> Guardia Nocturna (Cruza medianoche)
+                              <span className="inline-flex items-center gap-1 bg-indigo-50 text-indigo-700 text-[10px] font-bold px-1.5 py-0.5 rounded border border-indigo-200">
+                                <Moon className="w-2.5 h-2.5" /> Nocturna
                               </span>
                             )}
                             {shift.isGuard24h && (
-                              <span className="inline-flex items-center gap-1 bg-purple-50 text-purple-700 text-[10px] font-bold px-2 py-0.5 rounded-md border border-purple-200">
-                                <Shield className="w-3 h-3" /> Guardia 24h
+                              <span className="inline-flex items-center gap-1 bg-purple-50 text-purple-700 text-[10px] font-bold px-1.5 py-0.5 rounded border border-purple-200">
+                                <Shield className="w-2.5 h-2.5" /> 24h
                               </span>
                             )}
                           </div>
                         </td>
 
                         {/* 2. Funcionario */}
-                        <td className="px-5 py-4 whitespace-nowrap">
-                          <div className="font-bold text-gray-900 capitalize">
+                        <td className="px-3.5 py-3">
+                          <div className="font-bold text-gray-900 text-xs sm:text-sm capitalize leading-tight">
                             {shift.employee.firstName} {shift.employee.lastName}
                           </div>
-                          <div className="text-gray-400 text-xs font-mono">
+                          <div className="text-gray-400 text-[11px] font-mono mt-0.5">
                             CI: {shift.employee.ci}
                           </div>
                         </td>
 
                         {/* 3. Entrada */}
-                        <td className="px-5 py-4 whitespace-nowrap">
+                        <td className="px-3.5 py-3">
                           {shift.entrada ? (
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-2">
                               <div 
                                 onClick={() => { setSelectedRecord(shift.entrada); setObservationText(shift.entrada.observation || ''); }}
-                                className="relative w-11 h-11 rounded-xl overflow-hidden border-2 border-green-200 shadow-sm bg-gray-100 cursor-pointer hover:ring-2 hover:ring-green-400 transition-all shrink-0"
+                                className="relative w-9 h-9 rounded-lg overflow-hidden border border-green-200 shadow-2xs bg-gray-100 cursor-pointer hover:ring-2 hover:ring-green-400 transition-all shrink-0"
                                 title="Ver selfie de entrada"
                               >
-                                {shift.entrada.photoBase64 ? (
-                                  <img src={shift.entrada.photoBase64} alt="Selfie Entrada" className="w-full h-full object-cover" />
+                                {(shift.entrada.hasPhoto || shift.entrada.photoBase64) ? (
+                                  <img 
+                                    src={shift.entrada.photoBase64 || `/api/attendance/${shift.entrada.id}/photo`} 
+                                    alt="Selfie Entrada" 
+                                    loading="lazy"
+                                    className="w-full h-full object-cover" 
+                                  />
                                 ) : (
-                                  <div className="w-full h-full flex items-center justify-center text-xs font-bold text-gray-400">Sin foto</div>
+                                  <div className="w-full h-full flex items-center justify-center text-[10px] font-bold text-gray-400">Sin foto</div>
                                 )}
                               </div>
                               <div className="flex flex-col">
-                                <span className="font-extrabold text-gray-900 text-sm">
+                                <span className="font-extrabold text-gray-900 text-xs sm:text-sm">
                                   {formatHourMin(shift.entrada.timestamp)}
                                 </span>
                                 {evalIn && (
-                                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded w-max mt-0.5 ${
+                                  <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded w-max mt-0.5 ${
                                     evalIn.inRange ? 'text-green-700 bg-green-50' : 'text-orange-700 bg-orange-50'
                                   }`}>
                                     {evalIn.shortLabel}
@@ -1028,41 +1033,46 @@ export default function AdminAttendancesPage() {
                               </div>
                             </div>
                           ) : (
-                            <span className="text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded-md font-semibold border border-amber-200">
+                            <span className="text-[11px] text-amber-700 bg-amber-50 px-2 py-0.5 rounded font-semibold border border-amber-200">
                               Sin Entrada
                             </span>
                           )}
                         </td>
 
                         {/* 4. Salida */}
-                        <td className="px-5 py-4 whitespace-nowrap">
+                        <td className="px-3.5 py-3">
                           {shift.salida ? (
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-2">
                               <div 
                                 onClick={() => { setSelectedRecord(shift.salida); setObservationText(shift.salida.observation || ''); }}
-                                className="relative w-11 h-11 rounded-xl overflow-hidden border-2 border-red-200 shadow-sm bg-gray-100 cursor-pointer hover:ring-2 hover:ring-red-400 transition-all shrink-0"
+                                className="relative w-9 h-9 rounded-lg overflow-hidden border border-red-200 shadow-2xs bg-gray-100 cursor-pointer hover:ring-2 hover:ring-red-400 transition-all shrink-0"
                                 title="Ver selfie de salida"
                               >
-                                {shift.salida.photoBase64 ? (
-                                  <img src={shift.salida.photoBase64} alt="Selfie Salida" className="w-full h-full object-cover" />
+                                {(shift.salida.hasPhoto || shift.salida.photoBase64) ? (
+                                  <img 
+                                    src={shift.salida.photoBase64 || `/api/attendance/${shift.salida.id}/photo`} 
+                                    alt="Selfie Salida" 
+                                    loading="lazy"
+                                    className="w-full h-full object-cover" 
+                                  />
                                 ) : (
-                                  <div className="w-full h-full flex items-center justify-center text-xs font-bold text-gray-400">Sin foto</div>
+                                  <div className="w-full h-full flex items-center justify-center text-[10px] font-bold text-gray-400">Sin foto</div>
                                 )}
                               </div>
                               <div className="flex flex-col">
-                                <div className="flex items-center gap-1.5">
-                                  <span className="font-extrabold text-gray-900 text-sm">
+                                <div className="flex items-center gap-1">
+                                  <span className="font-extrabold text-gray-900 text-xs sm:text-sm">
                                     {formatHourMin(shift.salida.timestamp)}
                                   </span>
                                   {shift.isOvernight && (
-                                    <span className="inline-flex items-center gap-1 text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 px-1.5 py-0.5 rounded capitalize">
+                                    <span className="inline-flex items-center gap-0.5 text-[9px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 px-1 py-0.2 rounded capitalize">
                                       <Moon className="w-2.5 h-2.5 text-indigo-600" />
-                                      {new Intl.DateTimeFormat('es-ES', { weekday: 'short', day: '2-digit', month: 'short' }).format(new Date(shift.salida.timestamp))} (Día sig.)
+                                      {new Intl.DateTimeFormat('es-ES', { weekday: 'short', day: '2-digit' }).format(new Date(shift.salida.timestamp))}
                                     </span>
                                   )}
                                 </div>
                                 {evalOut && (
-                                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded w-max mt-0.5 ${
+                                  <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded w-max mt-0.5 ${
                                     evalOut.inRange ? 'text-green-700 bg-green-50' : 'text-orange-700 bg-orange-50'
                                   }`}>
                                     {evalOut.shortLabel}
@@ -1071,64 +1081,64 @@ export default function AdminAttendancesPage() {
                               </div>
                             </div>
                           ) : shift.status === 'EN_CURSO' ? (
-                            <div className="flex items-center gap-1.5 text-xs text-blue-700 bg-blue-50 px-2.5 py-1.5 rounded-lg font-bold border border-blue-200 w-max">
-                              <span className="w-2 h-2 rounded-full bg-blue-500 animate-ping"></span>
-                              <span>Turno en curso</span>
+                            <div className="flex items-center gap-1.5 text-[11px] text-blue-700 bg-blue-50 px-2 py-1 rounded-md font-bold border border-blue-200 w-max">
+                              <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-ping"></span>
+                              <span>En curso</span>
                             </div>
                           ) : (
-                            <span className="text-xs text-red-600 bg-red-50 px-2 py-1 rounded-md font-semibold border border-red-200">
+                            <span className="text-[11px] text-red-600 bg-red-50 px-2 py-0.5 rounded font-semibold border border-red-200">
                               Sin Salida
                             </span>
                           )}
                         </td>
 
                         {/* 5. Horas Cumplidas */}
-                        <td className="px-5 py-4 whitespace-nowrap text-center">
+                        <td className="px-3 py-3 text-center">
                           {shift.durationLabel !== '--' ? (
                             <div className="inline-flex flex-col items-center">
-                              <span className="text-base font-black text-gray-900 font-mono tracking-tight">
+                              <span className="text-sm font-black text-gray-900 font-mono tracking-tight">
                                 {shift.durationLabel}
                               </span>
-                              <span className="text-[10px] font-bold text-green-700 bg-green-50 px-2 py-0.5 rounded-full mt-0.5">
-                                Jornada {shift.isGuard24h ? '24h' : shift.isOvernight ? 'Guardia 12h' : 'Estándar'}
+                              <span className="text-[9px] font-bold text-green-700 bg-green-50 px-1.5 py-0.2 rounded-full mt-0.5 whitespace-nowrap">
+                                {shift.isGuard24h ? '24h' : shift.isOvernight ? 'Guardia 12h' : 'Estándar'}
                               </span>
                             </div>
                           ) : shift.status === 'EN_CURSO' ? (
-                            <span className="text-xs font-semibold text-gray-400 italic">Calculando al salir</span>
+                            <span className="text-[11px] font-semibold text-gray-400 italic">En curso</span>
                           ) : (
                             <span className="text-xs font-semibold text-gray-300">--</span>
                           )}
                         </td>
 
                         {/* 6. Estado y Observación */}
-                        <td className="px-5 py-4 text-xs">
+                        <td className="px-3 py-3 text-xs">
                           {shift.status === 'COMPLETA' ? (
-                            <span className="inline-flex items-center gap-1 text-green-700 font-bold bg-green-50 border border-green-200 px-2 py-0.5 rounded-md">
-                              <CheckCircle2 className="w-3.5 h-3.5 text-green-600" /> Completa
+                            <span className="inline-flex items-center gap-1 text-green-700 font-bold bg-green-50 border border-green-200 px-1.5 py-0.5 rounded text-[11px]">
+                              <CheckCircle2 className="w-3 h-3 text-green-600" /> Completa
                             </span>
                           ) : shift.status === 'EN_CURSO' ? (
-                            <span className="inline-flex items-center gap-1 text-blue-700 font-bold bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-md">
-                              <Clock className="w-3.5 h-3.5 text-blue-600" /> En Turno
+                            <span className="inline-flex items-center gap-1 text-blue-700 font-bold bg-blue-50 border border-blue-200 px-1.5 py-0.5 rounded text-[11px]">
+                              <Clock className="w-3 h-3 text-blue-600" /> En Turno
                             </span>
                           ) : shift.status === 'SIN_SALIDA' ? (
-                            <span className="inline-flex items-center gap-1 text-amber-700 font-bold bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-md">
-                              <AlertTriangle className="w-3.5 h-3.5 text-amber-600" /> Sin Salida
+                            <span className="inline-flex items-center gap-1 text-amber-700 font-bold bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded text-[11px]">
+                              <AlertTriangle className="w-3 h-3 text-amber-600" /> Sin Salida
                             </span>
                           ) : (
-                            <span className="inline-flex items-center gap-1 text-amber-700 font-bold bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-md">
-                              <AlertTriangle className="w-3.5 h-3.5 text-amber-600" /> Sin Entrada
+                            <span className="inline-flex items-center gap-1 text-amber-700 font-bold bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded text-[11px]">
+                              <AlertTriangle className="w-3 h-3 text-amber-600" /> Sin Entrada
                             </span>
                           )}
 
                           {(shift.entrada?.observation || shift.salida?.observation) && (
-                            <p className="text-[11px] text-gray-500 italic mt-1 line-clamp-2 max-w-[220px]">
+                            <p className="text-[10px] text-gray-500 italic mt-0.5 line-clamp-1 max-w-[160px]">
                               &quot;{[shift.entrada?.observation, shift.salida?.observation].filter(Boolean).join(' | ')}&quot;
                             </p>
                           )}
                         </td>
 
                         {/* 7. Acciones */}
-                        <td className="px-4 py-4 whitespace-nowrap text-center">
+                        <td className="px-2 py-3 text-center">
                           <button
                             type="button"
                             onClick={() => {
@@ -1136,8 +1146,8 @@ export default function AdminAttendancesPage() {
                               setSelectedRecord(targetRec);
                               setObservationText(targetRec?.observation || '');
                             }}
-                            className="p-2 text-gray-400 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors"
-                            title="Ver detalle completo de la jornada"
+                            className="p-1.5 text-gray-400 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Ver detalle completo"
                           >
                             <Eye className="w-4 h-4" />
                           </button>
@@ -1229,9 +1239,14 @@ export default function AdminAttendancesPage() {
                           )}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm">
-                          {record.photoBase64 ? (
-                            <div className="relative w-12 h-12 rounded-xl overflow-hidden border-2 border-gray-100 group-hover:border-red-200 transition-colors shadow-sm bg-gray-100">
-                              <img src={record.photoBase64} alt="Selfie" className="w-full h-full object-cover" />
+                          {(record.hasPhoto || record.photoBase64) ? (
+                            <div className="relative w-10 h-10 rounded-lg overflow-hidden border border-gray-200 group-hover:border-red-300 transition-colors shadow-2xs bg-gray-100">
+                              <img 
+                                src={record.photoBase64 || `/api/attendance/${record.id}/photo`} 
+                                alt="Selfie" 
+                                loading="lazy"
+                                className="w-full h-full object-cover" 
+                              />
                             </div>
                           ) : '-'}
                         </td>
@@ -1251,8 +1266,12 @@ export default function AdminAttendancesPage() {
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col md:flex-row overflow-hidden">
             {/* Izquierda: Foto y Mapa */}
             <div className="bg-gray-100 p-6 flex flex-col items-center justify-center border-r md:w-1/2">
-              {selectedRecord.photoBase64 ? (
-                <img src={selectedRecord.photoBase64} alt="Selfie Completa" className="w-48 h-48 rounded-xl object-cover shadow-md mb-4 border-2 border-white" />
+              {(selectedRecord.hasPhoto || selectedRecord.photoBase64) ? (
+                <img 
+                  src={selectedRecord.photoBase64 || `/api/attendance/${selectedRecord.id}/photo`} 
+                  alt="Selfie Completa" 
+                  className="w-48 h-48 rounded-xl object-cover shadow-md mb-4 border-2 border-white" 
+                />
               ) : (
                 <div className="w-48 h-48 bg-gray-200 rounded-xl flex items-center justify-center mb-4">
                   <span className="text-gray-500 text-sm font-semibold">Sin foto registrada</span>
