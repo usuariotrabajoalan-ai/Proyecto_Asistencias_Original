@@ -1,4 +1,4 @@
-const CACHE_NAME = 'afemec-cache-v3';
+const CACHE_NAME = 'afemec-cache-v4';
 const ASSETS_TO_CACHE = [
   '/',
   '/manifest.json',
@@ -26,7 +26,11 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   // Ignorar peticiones que no sean GET. También ignoramos la API, EXCEPTO la ruta de búsqueda de empleados para que funcione offline.
   if (event.request.method !== 'GET') return;
-  if (event.request.url.includes('/api/') && !event.request.url.includes('/api/employees/')) return;
+  const url = new URL(event.request.url);
+  // NUNCA interceptar ni cachear rutas administrativas (/admin/*)
+  if (url.pathname.startsWith('/admin')) return;
+  // Ignorar APIs excepto la búsqueda offline de empleados
+  if (url.pathname.startsWith('/api/') && !url.pathname.startsWith('/api/employees/')) return;
 
   // Estrategia: Stale-While-Revalidate (Sirve del caché rápido y actualiza en fondo)
   event.respondWith(

@@ -53,6 +53,7 @@ export async function GET(request: Request) {
         longitude: r.longitude,
         observation: r.observation,
         hasPhoto: Boolean(r.photoBase64),
+        photoUrl: r.photoBase64 ? `/api/attendance/${r.id}/photo` : null,
         employee: r.employee,
       }));
       return NextResponse.json(lightweight);

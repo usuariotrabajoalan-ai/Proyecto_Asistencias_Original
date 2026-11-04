@@ -83,6 +83,10 @@ export default function AdminAttendancesPage() {
   const fetchEmployees = async () => {
     try {
       const res = await fetch('/api/employees', { cache: 'no-store' });
+      if (res.status === 401) {
+        window.location.reload();
+        return;
+      }
       if (res.ok) setEmployeesList(await res.json());
     } catch (e) {
       console.error(e);
@@ -97,6 +101,10 @@ export default function AdminAttendancesPage() {
       if (employeeId) params.append('employeeId', employeeId);
       
       const res = await fetch(`/api/attendance?${params.toString()}`, { cache: 'no-store' });
+      if (res.status === 401) {
+        window.location.reload();
+        return;
+      }
       if (res.ok) setAttendances(await res.json());
     } catch (e) {
       console.error(e);

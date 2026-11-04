@@ -9,6 +9,7 @@ export default function PwaRegister() {
       navigator.serviceWorker.register('/sw.js')
         .then((registration) => {
           console.log('SW registrado exitosamente');
+          registration.update();
         })
         .catch((err) => {
           console.error('Error registrando SW:', err);

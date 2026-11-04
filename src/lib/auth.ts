@@ -10,7 +10,7 @@ export const ADMIN_COOKIE_OPTIONS = {
   secure: process.env.NODE_ENV === 'production',
   sameSite: 'lax' as const,
   path: '/',
-  maxAge: 60 * 60 * 24, // 24 horas
+  maxAge: 60 * 60 * 24 * 30, // 30 días de sesión
 };
 
 const SECRET_KEY = process.env.ADMIN_SESSION_SECRET || 'afemec-attendance-auth-secret-key-2026-institutional';
@@ -63,7 +63,7 @@ export async function createAdminToken(): Promise<string> {
     JSON.stringify({
       role: 'admin',
       iat: Date.now(),
-      exp: Date.now() + 24 * 60 * 60 * 1000, // 24 horas de validez
+      exp: Date.now() + 30 * 24 * 60 * 60 * 1000, // 30 días de validez
     })
   );
 
