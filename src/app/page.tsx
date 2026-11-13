@@ -88,15 +88,45 @@ export default function Home() {
         reject('Geolocalización no soportada por el navegador');
         return;
       }
-      navigator.geolocation.getCurrentPosition(
-        (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-        () => {
-          // Fallback en caso de que el GPS de alta precisión tarde demasiado bajo techo
+
+      let bestPos: GeolocationPosition | null = null;
+      let settled = false;
+      let watchId: number | null = null;
+
+      const finish = (pos: GeolocationPosition) => {
+        if (settled) return;
+        settled = true;
+        if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+        clearTimeout(overallTimer);
+        resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+      };
+
+      // Dar hasta 5 segundos al GPS para refinar la precisión silenciosamente sin mostrar errores
+      const overallTimer = setTimeout(() => {
+        if (bestPos) {
+          finish(bestPos);
+        } else {
+          if (watchId !== null) navigator.geolocation.clearWatch(watchId);
           navigator.geolocation.getCurrentPosition(
             (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
             (err) => reject('No se pudo obtener la ubicación. ' + err.message),
-            { enableHighAccuracy: false, timeout: 10000, maximumAge: 0 }
+            { enableHighAccuracy: false, timeout: 8000, maximumAge: 0 }
           );
+        }
+      }, 5000);
+
+      watchId = navigator.geolocation.watchPosition(
+        (pos) => {
+          if (!bestPos || pos.coords.accuracy < bestPos.coords.accuracy) {
+            bestPos = pos;
+          }
+          const evalRes = evaluateLocation(pos.coords.latitude, pos.coords.longitude);
+          if (pos.coords.accuracy <= 40 || evalRes.inRange) {
+            finish(pos);
+          }
+        },
+        () => {
+          // Si falla una lectura intermedia, el timer/fallback resolverá silenciosamente
         },
         { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
       );
