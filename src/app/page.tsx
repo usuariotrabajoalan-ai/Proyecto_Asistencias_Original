@@ -29,6 +29,14 @@ export default function Home() {
   const router = useRouter();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const prewarmBestPosRef = useRef<GeolocationPosition | null>(null);
+  const prewarmCapturedAtRef = useRef<number>(0);
+  const locationRef = useRef<{lat: number, lng: number} | null>(null);
+  const locationAccuracyRef = useRef<number>(Infinity);
+
+  useEffect(() => {
+    locationRef.current = location;
+  }, [location]);
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -43,6 +51,74 @@ export default function Home() {
       return () => clearTimeout(timeoutId);
     }
   }, [ci]);
+
+  useEffect(() => {
+    if (!employee || success) return;
+    if (typeof navigator === 'undefined' || !navigator.geolocation) return;
+
+    let cancelled = false;
+    let watchId: number | null = null;
+    let permStatus: PermissionStatus | null = null;
+
+    const startSilentWatch = () => {
+      if (cancelled || watchId !== null) return;
+      watchId = navigator.geolocation.watchPosition(
+        (pos) => {
+          const now = Date.now();
+          const prev = prewarmBestPosRef.current;
+          const isStale = now - prewarmCapturedAtRef.current > 45000;
+          if (!prev || isStale || pos.coords.accuracy <= prev.coords.accuracy) {
+            prewarmBestPosRef.current = pos;
+            prewarmCapturedAtRef.current = now;
+          }
+
+          // Refinar en silencio si ya había una lectura previa y llega una precisa/en rango antes de marcar
+          const curLoc = locationRef.current;
+          if (curLoc) {
+            const curEval = evaluateLocation(curLoc.lat, curLoc.lng);
+            const newEval = evaluateLocation(pos.coords.latitude, pos.coords.longitude);
+            const improvedIntoRange = !curEval.inRange && newEval.inRange;
+            const sharperGps = pos.coords.accuracy < locationAccuracyRef.current && pos.coords.accuracy <= 45;
+            if (improvedIntoRange || sharperGps) {
+              locationAccuracyRef.current = pos.coords.accuracy;
+              setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+            }
+          }
+        },
+        () => {
+          // Pre-calentamiento silencioso: no mostrar mensajes de falla al empleado
+        },
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+      );
+    };
+
+    const initPrewarm = async () => {
+      try {
+        if (navigator.permissions && navigator.permissions.query) {
+          permStatus = await navigator.permissions.query({ name: 'geolocation' });
+          if (cancelled) return;
+          if (permStatus.state === 'granted') {
+            startSilentWatch();
+          }
+          permStatus.onchange = () => {
+            if (permStatus?.state === 'granted') {
+              startSilentWatch();
+            }
+          };
+        }
+      } catch {
+        // Navegadores sin Permissions API mantienen activación manual normal
+      }
+    };
+
+    initPrewarm();
+
+    return () => {
+      cancelled = true;
+      if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+      if (permStatus) permStatus.onchange = null;
+    };
+  }, [employee?.id, success]);
 
   const handleSearchEmployee = async (searchCi: string) => {
     if (!searchCi) return;
@@ -89,7 +165,18 @@ export default function Home() {
         return;
       }
 
-      let bestPos: GeolocationPosition | null = null;
+      const prewarmed = prewarmBestPosRef.current;
+      const prewarmFresh = prewarmed && (Date.now() - prewarmCapturedAtRef.current <= 45000);
+      if (prewarmFresh && prewarmed) {
+        const evalPre = evaluateLocation(prewarmed.coords.latitude, prewarmed.coords.longitude);
+        if (prewarmed.coords.accuracy <= 40 || evalPre.inRange) {
+          locationAccuracyRef.current = prewarmed.coords.accuracy;
+          resolve({ lat: prewarmed.coords.latitude, lng: prewarmed.coords.longitude });
+          return;
+        }
+      }
+
+      let bestPos: GeolocationPosition | null = prewarmFresh ? prewarmed : null;
       let settled = false;
       let watchId: number | null = null;
 
@@ -98,27 +185,33 @@ export default function Home() {
         settled = true;
         if (watchId !== null) navigator.geolocation.clearWatch(watchId);
         clearTimeout(overallTimer);
+        locationAccuracyRef.current = pos.coords.accuracy;
         resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude });
       };
 
-      // Dar hasta 5 segundos al GPS para refinar la precisión silenciosamente sin mostrar errores
+      // Dar hasta 8 segundos al GPS para refinar la precisión silenciosamente sin mostrar errores
       const overallTimer = setTimeout(() => {
         if (bestPos) {
           finish(bestPos);
         } else {
           if (watchId !== null) navigator.geolocation.clearWatch(watchId);
           navigator.geolocation.getCurrentPosition(
-            (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+            (pos) => {
+              locationAccuracyRef.current = pos.coords.accuracy;
+              resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+            },
             (err) => reject('No se pudo obtener la ubicación. ' + err.message),
-            { enableHighAccuracy: false, timeout: 8000, maximumAge: 0 }
+            { enableHighAccuracy: false, timeout: 8000, maximumAge: 15000 }
           );
         }
-      }, 5000);
+      }, 8000);
 
       watchId = navigator.geolocation.watchPosition(
         (pos) => {
-          if (!bestPos || pos.coords.accuracy < bestPos.coords.accuracy) {
+          if (!bestPos || pos.coords.accuracy <= bestPos.coords.accuracy) {
             bestPos = pos;
+            prewarmBestPosRef.current = pos;
+            prewarmCapturedAtRef.current = Date.now();
           }
           const evalRes = evaluateLocation(pos.coords.latitude, pos.coords.longitude);
           if (pos.coords.accuracy <= 40 || evalRes.inRange) {
@@ -128,7 +221,7 @@ export default function Home() {
         () => {
           // Si falla una lectura intermedia, el timer/fallback resolverá silenciosamente
         },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
       );
     });
   };
@@ -141,6 +234,9 @@ export default function Home() {
     setSuccess(false);
     setLocation(null);
     setSuccessSede('');
+    prewarmBestPosRef.current = null;
+    prewarmCapturedAtRef.current = 0;
+    locationAccuracyRef.current = Infinity;
   };
 
   const handleAttendance = async (type: 'ENTRADA' | 'SALIDA') => {

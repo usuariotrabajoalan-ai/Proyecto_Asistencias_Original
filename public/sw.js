@@ -1,4 +1,4 @@
-const CACHE_NAME = 'afemec-cache-v4';
+const CACHE_NAME = 'afemec-cache-v5';
 const ASSETS_TO_CACHE = [
   '/',
   '/manifest.json',
@@ -31,6 +31,22 @@ self.addEventListener('fetch', (event) => {
   if (url.pathname.startsWith('/admin')) return;
   // Ignorar APIs excepto la búsqueda offline de empleados
   if (url.pathname.startsWith('/api/') && !url.pathname.startsWith('/api/employees/')) return;
+
+  // Navegaciones HTML y raíz '/': Network-First para ejecutar siempre la última versión del sistema si hay conexión
+  if (event.request.mode === 'navigate' || url.pathname === '/') {
+    event.respondWith(
+      fetch(event.request)
+        .then((networkResponse) => {
+          if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
+            const responseToCache = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseToCache));
+          }
+          return networkResponse;
+        })
+        .catch(() => caches.match(event.request).then((cached) => cached || caches.match('/')))
+    );
+    return;
+  }
 
   // Estrategia: Stale-While-Revalidate (Sirve del caché rápido y actualiza en fondo)
   event.respondWith(

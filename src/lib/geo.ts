@@ -12,9 +12,9 @@ export const SEDES: SedeConfig[] = [
     id: 'SEDE_SOCIAL',
     name: 'Sede Social (Lambaré)',
     shortName: 'Sede Social',
-    lat: -25.356318,
-    lng: -57.624452,
-    radiusMeters: 250, // 250m de cobertura
+    lat: -25.356550,
+    lng: -57.623650,
+    radiusMeters: 280, // 280m centrada entre el complejo principal y la portería/acceso este
   },
   {
     id: 'SEDE_ADMINISTRATIVA',
