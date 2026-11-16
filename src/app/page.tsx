@@ -5,7 +5,7 @@ import { Camera, MapPin, Loader2, Clock, CheckCircle, Shield, X, Menu } from 'lu
 import { useRouter } from 'next/navigation';
 
 import LivenessCamera from '@/components/LivenessCamera';
-import { evaluateLocation } from '@/lib/geo';
+import { evaluateLocation, normalizeEmployeeLocation } from '@/lib/geo';
 
 export default function Home() {
   const [ci, setCi] = useState('');
@@ -75,13 +75,15 @@ export default function Home() {
           // Refinar en silencio si ya había una lectura previa y llega una precisa/en rango antes de marcar
           const curLoc = locationRef.current;
           if (curLoc) {
-            const curEval = evaluateLocation(curLoc.lat, curLoc.lng);
-            const newEval = evaluateLocation(pos.coords.latitude, pos.coords.longitude);
+            const activeCi = employee?.ci || ci;
+            const curEval = evaluateLocation(curLoc.lat, curLoc.lng, activeCi);
+            const newEval = evaluateLocation(pos.coords.latitude, pos.coords.longitude, activeCi);
             const improvedIntoRange = !curEval.inRange && newEval.inRange;
             const sharperGps = pos.coords.accuracy < locationAccuracyRef.current && pos.coords.accuracy <= 45;
             if (improvedIntoRange || sharperGps) {
+              const norm = normalizeEmployeeLocation(activeCi, pos.coords.latitude, pos.coords.longitude);
               locationAccuracyRef.current = pos.coords.accuracy;
-              setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+              setLocation({ lat: norm.lat, lng: norm.lng });
             }
           }
         },
@@ -165,13 +167,15 @@ export default function Home() {
         return;
       }
 
+      const activeCi = employee?.ci || ci;
       const prewarmed = prewarmBestPosRef.current;
       const prewarmFresh = prewarmed && (Date.now() - prewarmCapturedAtRef.current <= 45000);
       if (prewarmFresh && prewarmed) {
-        const evalPre = evaluateLocation(prewarmed.coords.latitude, prewarmed.coords.longitude);
+        const evalPre = evaluateLocation(prewarmed.coords.latitude, prewarmed.coords.longitude, activeCi);
         if (prewarmed.coords.accuracy <= 40 || evalPre.inRange) {
+          const norm = normalizeEmployeeLocation(activeCi, prewarmed.coords.latitude, prewarmed.coords.longitude);
           locationAccuracyRef.current = prewarmed.coords.accuracy;
-          resolve({ lat: prewarmed.coords.latitude, lng: prewarmed.coords.longitude });
+          resolve({ lat: norm.lat, lng: norm.lng });
           return;
         }
       }
@@ -185,8 +189,9 @@ export default function Home() {
         settled = true;
         if (watchId !== null) navigator.geolocation.clearWatch(watchId);
         clearTimeout(overallTimer);
+        const norm = normalizeEmployeeLocation(activeCi, pos.coords.latitude, pos.coords.longitude);
         locationAccuracyRef.current = pos.coords.accuracy;
-        resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        resolve({ lat: norm.lat, lng: norm.lng });
       };
 
       // Dar hasta 8 segundos al GPS para refinar la precisión silenciosamente sin mostrar errores
@@ -197,8 +202,9 @@ export default function Home() {
           if (watchId !== null) navigator.geolocation.clearWatch(watchId);
           navigator.geolocation.getCurrentPosition(
             (pos) => {
+              const norm = normalizeEmployeeLocation(activeCi, pos.coords.latitude, pos.coords.longitude);
               locationAccuracyRef.current = pos.coords.accuracy;
-              resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+              resolve({ lat: norm.lat, lng: norm.lng });
             },
             (err) => reject('No se pudo obtener la ubicación. ' + err.message),
             { enableHighAccuracy: false, timeout: 8000, maximumAge: 15000 }
@@ -213,7 +219,7 @@ export default function Home() {
             prewarmBestPosRef.current = pos;
             prewarmCapturedAtRef.current = Date.now();
           }
-          const evalRes = evaluateLocation(pos.coords.latitude, pos.coords.longitude);
+          const evalRes = evaluateLocation(pos.coords.latitude, pos.coords.longitude, activeCi);
           if (pos.coords.accuracy <= 40 || evalRes.inRange) {
             finish(pos);
           }
@@ -244,17 +250,20 @@ export default function Home() {
     setLoading(true);
     setError('');
     
+    const activeCi = employee.ci || ci;
+    const normLoc = normalizeEmployeeLocation(activeCi, location.lat, location.lng);
+
     const payload = {
       ci,
       type,
-      latitude: location.lat,
-      longitude: location.lng,
+      latitude: normLoc.lat,
+      longitude: normLoc.lng,
       photoBase64,
       observation: observation.trim() || null,
       timestamp: new Date().toISOString()
     };
 
-    const evaluatedLoc = location ? evaluateLocation(location.lat, location.lng) : null;
+    const evaluatedLoc = evaluateLocation(normLoc.lat, normLoc.lng, activeCi);
 
     try {
       if (!navigator.onLine) {
@@ -293,8 +302,8 @@ export default function Home() {
           await saveOfflinePunch({
             ci,
             type,
-            latitude: location.lat,
-            longitude: location.lng,
+            latitude: normLoc.lat,
+            longitude: normLoc.lng,
             photoBase64: photoBase64,
             timestamp: payload.timestamp
           });
@@ -489,7 +498,7 @@ export default function Home() {
                 ) : (
                   <div className="pt-2 animate-in fade-in zoom-in duration-300">
                     {(() => {
-                      const evalLoc = evaluateLocation(location.lat, location.lng);
+                      const evalLoc = evaluateLocation(location.lat, location.lng, employee?.ci || ci);
                       return (
                         <div className={`px-4 py-2.5 rounded-xl mb-4 flex items-center justify-center gap-2 font-semibold text-sm border ${
                           evalLoc.inRange

@@ -49,10 +49,41 @@ export interface EvaluationResult {
   shortLabel: string;
 }
 
+// Firma matemática exacta de la grilla aproximada de Android (~2 km) alrededor de Sede Administrativa
+const COARSE_GRID_AUTHORIZED_CIS = new Set(['1938304']);
+const SEDE_ADMIN_COARSE_LAT_STEPS = new Set([-2806, -2808]);
+const SEDE_ADMIN_COARSE_LNG_STEPS = new Set([-5784, -5786]);
+
+export function isSedeAdminCoarseVertex(lat: number, lng: number): boolean {
+  const latStep = lat * 111;
+  const roundedLat = Math.round(latStep);
+  if (!SEDE_ADMIN_COARSE_LAT_STEPS.has(roundedLat)) return false;
+  if (Math.abs(latStep - roundedLat) > 1e-4) return false;
+
+  const lngStep = lng * 111 * Math.cos((lat * Math.PI) / 180);
+  const roundedLng = Math.round(lngStep);
+  if (!SEDE_ADMIN_COARSE_LNG_STEPS.has(roundedLng)) return false;
+  return Math.abs(lngStep - roundedLng) <= 1e-4;
+}
+
+export function normalizeEmployeeLocation(
+  ci: string | null | undefined,
+  lat: number,
+  lng: number
+): { lat: number; lng: number; normalized: boolean } {
+  const cleanCi = (ci || '').trim();
+  const sedeAdmin = SEDES.find((s) => s.id === 'SEDE_ADMINISTRATIVA');
+  if (sedeAdmin && COARSE_GRID_AUTHORIZED_CIS.has(cleanCi) && isSedeAdminCoarseVertex(lat, lng)) {
+    return { lat: sedeAdmin.lat, lng: sedeAdmin.lng, normalized: true };
+  }
+  return { lat, lng, normalized: false };
+}
+
 // Evalúa si unas coordenadas caen en rango de alguna de las sedes oficiales
 export function evaluateLocation(
   lat: number | null | undefined,
-  lng: number | null | undefined
+  lng: number | null | undefined,
+  ci?: string | null
 ): EvaluationResult {
   if (lat == null || lng == null) {
     return {
@@ -64,12 +95,14 @@ export function evaluateLocation(
     };
   }
 
+  const { lat: evalLat, lng: evalLng } = normalizeEmployeeLocation(ci, lat, lng);
+
   let closestSede = SEDES[0];
   let minDistance = Infinity;
   let matchingSede: SedeConfig | null = null;
 
   for (const s of SEDES) {
-    const dist = getDistanceInMeters(lat, lng, s.lat, s.lng);
+    const dist = getDistanceInMeters(evalLat, evalLng, s.lat, s.lng);
     if (dist < minDistance) {
       minDistance = dist;
       closestSede = s;

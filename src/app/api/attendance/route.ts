@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { normalizeEmployeeLocation } from '@/lib/geo';
 
 export async function GET(request: Request) {
   try {
@@ -89,6 +90,12 @@ export async function POST(request: Request) {
     }
     if (typeof longitude === 'number' && !isNaN(longitude) && longitude >= -180 && longitude <= 180) {
       validLng = longitude;
+    }
+
+    if (validLat !== null && validLng !== null) {
+      const normalized = normalizeEmployeeLocation(cleanCi, validLat, validLng);
+      validLat = normalized.lat;
+      validLng = normalized.lng;
     }
 
     // Sanitización de foto y observación
