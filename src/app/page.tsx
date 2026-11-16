@@ -172,7 +172,7 @@ export default function Home() {
       const prewarmFresh = prewarmed && (Date.now() - prewarmCapturedAtRef.current <= 45000);
       if (prewarmFresh && prewarmed) {
         const evalPre = evaluateLocation(prewarmed.coords.latitude, prewarmed.coords.longitude, activeCi);
-        if (prewarmed.coords.accuracy <= 40 || evalPre.inRange) {
+        if (evalPre.inRange || prewarmed.coords.accuracy <= 15) {
           const norm = normalizeEmployeeLocation(activeCi, prewarmed.coords.latitude, prewarmed.coords.longitude);
           locationAccuracyRef.current = prewarmed.coords.accuracy;
           resolve({ lat: norm.lat, lng: norm.lng });
@@ -220,7 +220,7 @@ export default function Home() {
             prewarmCapturedAtRef.current = Date.now();
           }
           const evalRes = evaluateLocation(pos.coords.latitude, pos.coords.longitude, activeCi);
-          if (pos.coords.accuracy <= 40 || evalRes.inRange) {
+          if (evalRes.inRange || pos.coords.accuracy <= 15) {
             finish(pos);
           }
         },

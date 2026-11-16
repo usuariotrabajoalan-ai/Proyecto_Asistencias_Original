@@ -20,9 +20,9 @@ export const SEDES: SedeConfig[] = [
     id: 'SEDE_ADMINISTRATIVA',
     name: 'Sede Administrativa (14 de Mayo)',
     shortName: 'Sede Administrativa',
-    lat: -25.286780,
-    lng: -57.640610,
-    radiusMeters: 45, // 45m de cobertura centrada para abarcar oficinas y acceso
+    lat: -25.286660,
+    lng: -57.640230,
+    radiusMeters: 55, // 55m centrada entre la esquina de 14 de Mayo y el bloque real de oficinas/acceso
   }
 ];
 
